@@ -256,10 +256,15 @@ open class RSDropDown: UITextField {
 				}
 			}
 			if self.scrollToSelectedItem {
-				if let selectedRow = self.table.indexPathForSelectedRow {
-					self.table.scrollToRow(at: selectedRow, at: .middle, animated: true)
+				if let selectedIndex = self.selectedIndex {
+					let indexPath = IndexPath(item: selectedIndex, section: 0)
+					if let _ = self.table.cellForRow(at: indexPath) {
+						self.table.scrollToRow(at: indexPath, at: .middle, animated: true)
+					}
 				}
 			}
+			
+			self.TableDidAppearCompletion()
 		}
 	}
 
