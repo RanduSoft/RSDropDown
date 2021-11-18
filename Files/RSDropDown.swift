@@ -29,6 +29,7 @@ open class RSDropDown: UITextField {
 	@IBInspectable public var checkMarkEnabled: Bool = true
 	@IBInspectable public var handleKeyboard: Bool = true
 	@IBInspectable public var flashIndicatorWhenOpeningList: Bool = true
+	@IBInspectable public var scrollToSelectedItem: Bool = true
 	@IBInspectable public var imageCellIsRounded: Bool = false
 	@IBInspectable public var showTableBorder: Bool = false
 	@IBInspectable public var listHeight: CGFloat = 150
@@ -101,7 +102,6 @@ open class RSDropDown: UITextField {
 		}
 	}
 	
-	
 	public var selectedItemTitle: String {
 		return self.text ?? ""
 	}
@@ -172,9 +172,9 @@ open class RSDropDown: UITextField {
 	
 	fileprivate func addGesture() {
 		let gesture =  UITapGestureRecognizer(target: self, action:  #selector(touchAction))
-		if isSearchEnable{
+		if isSearchEnable {
 			self.rightView?.addGestureRecognizer(gesture)
-		}else{
+		} else {
 			self.addGestureRecognizer(gesture)
 		}
 		let gesture2 =  UITapGestureRecognizer(target: self, action:  #selector(touchAction))
@@ -190,14 +190,14 @@ open class RSDropDown: UITextField {
 			pnt = superView!.convert(pnt, to: superView!.superview)
 			if nil == superView!.superview{
 				break
-			}else{
+			} else {
 				superView = superView!.superview
 			}
 		}
 		return superView!.convert(pnt, to: baseView)
 	}
 	public func showList() {
-		if parentController == nil{
+		if parentController == nil {
 			parentController = self.parentViewController
 		}
 		backgroundView.frame = parentController?.view.frame ?? backgroundView.frame
@@ -206,7 +206,7 @@ open class RSDropDown: UITextField {
 		TableWillAppearCompletion()
 		if listHeight > rowHeight * CGFloat( dataArray.count) {
 			self.tableheightX = rowHeight * CGFloat(dataArray.count)
-		}else{
+		} else {
 			self.tableheightX = listHeight
 		}
 		table = UITableView(frame: CGRect(x: pointToParent.x ,
@@ -253,6 +253,11 @@ open class RSDropDown: UITextField {
 			if self.flashIndicatorWhenOpeningList {
 				DispatchQueue.main.async {
 					self.table.flashScrollIndicators()
+				}
+			}
+			if self.scrollToSelectedItem {
+				if let selectedRow = self.table.indexPathForSelectedRow {
+					self.table.scrollToRow(at: selectedRow, at: .middle, animated: true)
 				}
 			}
 		}
