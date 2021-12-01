@@ -257,10 +257,7 @@ open class RSDropDown: UITextField {
 			}
 			if self.scrollToSelectedItem {
 				if let selectedIndex = self.selectedIndex {
-					let indexPath = IndexPath(item: selectedIndex, section: 0)
-					if let _ = self.table.cellForRow(at: indexPath) {
-						self.table.scrollToRow(at: indexPath, at: .middle, animated: true)
-					}
+					self.table.scrollToRow(at: IndexPath(row: selectedIndex, section: 0), at: .middle, animated: true)
 				}
 			}
 			
