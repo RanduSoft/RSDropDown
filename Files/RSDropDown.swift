@@ -9,7 +9,7 @@ import UIKit
 
 open class RSDropDown: UITextField {
 
-    fileprivate var arrow: Arrow!
+    public var chevron: UIImageView!
 	public var table: UITableView!
 	public var shadow: UIView!
 	public var selectedIndex: Int? {
@@ -34,6 +34,11 @@ open class RSDropDown: UITextField {
 	@IBInspectable public var showTableBorder: Bool = false
     @IBInspectable public var tableCornerRadius: CGFloat = 8
 	@IBInspectable public var listHeight: CGFloat = 150
+    @IBInspectable public var chevronImage: UIImage = UIImage(systemName: "chevron.down")! {
+        didSet {
+            self.chevron.image = self.chevronImage
+        }
+    }
 	
 	@IBInspectable public var isSearchEnable: Bool = false {
 		didSet {
@@ -41,15 +46,15 @@ open class RSDropDown: UITextField {
 		}
 	}
 	
-	@IBInspectable public var arrowSize: CGFloat = 15 {
+	@IBInspectable public var chevronSize: CGFloat = 15 {
 		didSet{
-			let center =  arrow.superview!.center
-			arrow.frame = CGRect(x: center.x - arrowSize/2, y: center.y - arrowSize/2, width: arrowSize, height: arrowSize)
+            let center = self.chevron.superview!.center
+            self.chevron.frame = CGRect(x: center.x - chevronSize/2, y: center.y - chevronSize/2, width: chevronSize, height: chevronSize)
 		}
 	}
-	@IBInspectable public var arrowColor: UIColor = .label {
+	@IBInspectable public var chevronColor: UIColor = .label {
 		didSet{
-			arrow.arrowColor = arrowColor
+            self.chevron.tintColor = chevronColor
 		}
 	}
 
@@ -136,11 +141,15 @@ open class RSDropDown: UITextField {
 		let rightView = UIView(frame: CGRect(x: 0.0, y: 0.0, width: size, height: size))
 		self.rightView = rightView
 		self.rightViewMode = .always
-		let arrowContainerView = UIView(frame: rightView.frame)
-		self.rightView?.addSubview(arrowContainerView)
-		let center = arrowContainerView.center
-		arrow = Arrow(origin: CGPoint(x: center.x - arrowSize/2,y: center.y - arrowSize/2),size: arrowSize  )
-		arrowContainerView.addSubview(arrow)
+		let chevronContainerView = UIView(frame: rightView.frame)
+		self.rightView?.addSubview(chevronContainerView)
+        
+        let containerCenter = chevronContainerView.center
+        self.chevron = UIImageView(frame: CGRect(x: containerCenter.x - chevronSize/2, y: containerCenter.y - chevronSize/2, width: self.chevronSize, height: self.chevronSize))
+        self.chevron.image = self.chevronImage
+        self.chevron.contentMode = .scaleAspectFit
+        self.chevron.tintColor = self.chevronColor
+        chevronContainerView.addSubview(self.chevron)
 
 		self.backgroundView = UIView(frame: .zero)
 		self.backgroundView.backgroundColor = .clear
@@ -247,7 +256,7 @@ open class RSDropDown: UITextField {
 			self.table.alpha = 1
 			self.shadow.frame = self.table.frame
 //			self.shadow.dropShadow()
-			self.arrow.position = .up
+            self.chevron.transform = CGAffineTransform(rotationAngle: .pi)
 		} completion: { finished in
 			self.layoutIfNeeded()
 			
@@ -280,7 +289,7 @@ open class RSDropDown: UITextField {
 												  height: 0)
 						self.shadow.alpha = 0
 						self.shadow.frame = self.table.frame
-						self.arrow.position = .down
+                        self.chevron.transform = CGAffineTransform.identity
 		},
 					   completion: { (didFinish) -> Void in
 
@@ -293,7 +302,6 @@ open class RSDropDown: UITextField {
 	}
 
 	@objc public func touchAction() {
-
 		isSelected ?  hideList() : showList()
 	}
 	func reSizeTable() {
@@ -454,81 +462,6 @@ extension RSDropDown: UITableViewDelegate {
 
 		}
 
-	}
-}
-
-//MARK: Arrow
-fileprivate enum Position {
-	case left
-	case down
-	case right
-	case up
-}
-
-fileprivate class Arrow: UIView {
-	let shapeLayer = CAShapeLayer()
-	var arrowColor: UIColor = .label {
-		didSet{
-			shapeLayer.fillColor = arrowColor.cgColor
-		}
-	}
-	
-	var position: Position = .down {
-		didSet{
-			switch position {
-			case .left:
-				self.transform = CGAffineTransform(rotationAngle: -CGFloat.pi/2)
-				break
-
-			case .down:
-				self.transform = CGAffineTransform(rotationAngle: CGFloat.pi*2)
-				break
-
-			case .right:
-				self.transform = CGAffineTransform(rotationAngle: CGFloat.pi/2)
-				break
-
-			case .up:
-				self.transform = CGAffineTransform(rotationAngle: CGFloat.pi)
-				break
-			}
-		}
-	}
-
-	init(origin: CGPoint, size: CGFloat ) {
-		super.init(frame: CGRect(x: origin.x, y: origin.y, width: size, height: size))
-	}
-
-	required init?(coder aDecoder: NSCoder) {
-		fatalError("init(coder:) has not been implemented")
-	}
-
-	override func draw(_ rect: CGRect) {
-
-		// Get size
-		let size = self.layer.frame.width
-
-		// Create path
-		let bezierPath = UIBezierPath()
-
-		// Draw points
-		let qSize = size/4
-
-		bezierPath.move(to: CGPoint(x: 0, y: qSize))
-		bezierPath.addLine(to: CGPoint(x: size, y: qSize))
-		bezierPath.addLine(to: CGPoint(x: size/2, y: qSize*3))
-		bezierPath.addLine(to: CGPoint(x: 0, y: qSize))
-		bezierPath.close()
-
-		// Mask to path
-		shapeLayer.path = bezierPath.cgPath
-		shapeLayer.fillColor = arrowColor.cgColor
-	   
-		if #available(iOS 12.0, *) {
-			self.layer.addSublayer (shapeLayer)
-		} else {
-			self.layer.mask = shapeLayer
-		}
 	}
 }
 
