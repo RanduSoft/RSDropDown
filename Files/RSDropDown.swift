@@ -5,12 +5,11 @@
 //
 //
 
-import Foundation
 import UIKit
 
 open class RSDropDown: UITextField {
 
-	var arrow: Arrow!
+    fileprivate var arrow: Arrow!
 	public var table: UITableView!
 	public var shadow: UIView!
 	public var selectedIndex: Int? {
@@ -220,7 +219,7 @@ open class RSDropDown: UITextField {
 		table.delegate = self
 		table.alpha = 0
 		table.separatorStyle = .singleLine
-		table.layer.cornerRadius = 8
+        table.layer.cornerRadius = self.layer.cornerRadius
 		
 		if self.showTableBorder {
 			table.layer.borderColor = self.borderColor.cgColor
@@ -455,22 +454,15 @@ extension RSDropDown: UITableViewDelegate {
 	}
 }
 
-
-extension RSDropDown {
-	
-}
-
-
-
 //MARK: Arrow
-enum Position {
+fileprivate enum Position {
 	case left
 	case down
 	case right
 	case up
 }
 
-class Arrow: UIView {
+fileprivate class Arrow: UIView {
 	let shapeLayer = CAShapeLayer()
 	var arrowColor: UIColor = .label {
 		didSet{
@@ -537,7 +529,7 @@ class Arrow: UIView {
 	}
 }
 
-extension UIView {
+fileprivate extension UIView {
 
 	func dropShadow(scale: Bool = true) {
 		layer.masksToBounds = false
@@ -570,5 +562,3 @@ extension UIView {
 		return nil
 	}
 }
-
-
