@@ -23,6 +23,7 @@ open class RSDropDown: UITextField {
 	@IBInspectable public var rowHeight: CGFloat = 40
 	@IBInspectable public var animationDuration: TimeInterval = 0.3
 	@IBInspectable public var rowBackgroundColor: UIColor = .systemGray6
+    @IBInspectable public var rowTextColor: UIColor = .label
 	@IBInspectable public var selectedRowColor: UIColor = .clear
 	@IBInspectable public var hideOptionsWhenSelect = true
 	@IBInspectable public var checkMarkEnabled: Bool = true
@@ -31,6 +32,7 @@ open class RSDropDown: UITextField {
 	@IBInspectable public var scrollToSelectedItem: Bool = true
 	@IBInspectable public var imageCellIsRounded: Bool = false
 	@IBInspectable public var showTableBorder: Bool = false
+    @IBInspectable public var tableCornerRadius: CGFloat = 8
 	@IBInspectable public var listHeight: CGFloat = 150
 	
 	@IBInspectable public var isSearchEnable: Bool = false {
@@ -219,7 +221,7 @@ open class RSDropDown: UITextField {
 		table.delegate = self
 		table.alpha = 0
 		table.separatorStyle = .singleLine
-        table.layer.cornerRadius = self.layer.cornerRadius
+        table.layer.cornerRadius = self.tableCornerRadius
 		
 		if self.showTableBorder {
 			table.layer.borderColor = self.borderColor.cgColor
@@ -400,6 +402,7 @@ extension RSDropDown: UITableViewDataSource {
 		}
 		
 		cell.textLabel?.text = "\(dataArray[indexPath.row])"
+        cell.textLabel?.textColor = self.rowTextColor
 		cell.accessoryType = (indexPath.row == selectedIndex) && checkMarkEnabled ? .checkmark : .none
 		cell.selectionStyle = .none
 		cell.tintColor = cell.textLabel?.textColor ?? .label
