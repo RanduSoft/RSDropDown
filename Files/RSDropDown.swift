@@ -68,6 +68,12 @@ open class RSDropDown: UITextField {
 			layer.borderWidth = borderWidth
 		}
 	}
+    
+    @IBInspectable public var padding = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 0) {
+        didSet {
+            self.layoutIfNeeded()
+        }
+    }
 
 	//Variables
 	fileprivate var tableheightX: CGFloat = 100
@@ -357,6 +363,17 @@ open class RSDropDown: UITextField {
 		TableDidDisappearCompletion = completion
 	}
 
+    override open func textRect(forBounds bounds: CGRect) -> CGRect {
+        return bounds.inset(by: self.padding)
+    }
+
+    override open func placeholderRect(forBounds bounds: CGRect) -> CGRect {
+        return bounds.inset(by: self.padding)
+    }
+
+    override open func editingRect(forBounds bounds: CGRect) -> CGRect {
+        return bounds.inset(by: self.padding)
+    }
 }
 
 //MARK: UITextFieldDelegate
@@ -365,7 +382,7 @@ extension RSDropDown : UITextFieldDelegate {
 		superview?.endEditing(true)
 		return false
 	}
-	public func  textFieldDidBeginEditing(_ textField: UITextField) {
+	public func textFieldDidBeginEditing(_ textField: UITextField) {
 		textField.text = ""
 		//self.selectedIndex = nil
 		self.dataArray = self.optionArray
