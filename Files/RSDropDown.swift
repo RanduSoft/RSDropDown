@@ -3,364 +3,318 @@
 //
 //  Created by Radu Ursache.
 //
-//
+//  v2.0
 
 import UIKit
 
 open class RSDropDown: UITextField {
-
-    public var chevron: UIImageView!
-	public var table: UITableView!
-	public var shadow: UIView!
-	public var selectedIndex: Int? {
-		didSet {
-			guard let selectedIndex = self.selectedIndex else { return }
-			self.text = self.optionArray[selectedIndex]
-		}
-	}
-
-	//MARK: IBInspectable
-	@IBInspectable public var rowHeight: CGFloat = 40
-	@IBInspectable public var animationDuration: TimeInterval = 0.3
-	@IBInspectable public var rowBackgroundColor: UIColor = .systemGray6
-    @IBInspectable public var rowTextColor: UIColor = .label
-	@IBInspectable public var selectedRowColor: UIColor = .clear
-	@IBInspectable public var hideOptionsWhenSelect = true
-	@IBInspectable public var checkMarkEnabled: Bool = true
-	@IBInspectable public var handleKeyboard: Bool = true
-	@IBInspectable public var flashIndicatorWhenOpeningList: Bool = true
-	@IBInspectable public var scrollToSelectedItem: Bool = true
-	@IBInspectable public var imageCellIsRounded: Bool = false
-	@IBInspectable public var showTableBorder: Bool = false
-    @IBInspectable public var tableCornerRadius: CGFloat = 8
-	@IBInspectable public var listHeight: CGFloat = 150
-    @IBInspectable public var chevronImage: UIImage = UIImage(systemName: "chevron.down")! {
+    fileprivate var tableView: UITableView!
+    fileprivate var chevronImageView: UIImageView!
+    fileprivate var shadowView: UIView!
+    fileprivate var tableViewHeightX: CGFloat = 100
+    fileprivate var dataArray = [String]()
+    fileprivate var imageArray = [String]()
+    fileprivate weak var parentController: UIViewController?
+    fileprivate var pointToParent = CGPoint.zero
+    fileprivate var backgroundView = UIView()
+    fileprivate var keyboardHeight: CGFloat = 0
+    fileprivate var searchText = String() {
         didSet {
-            self.chevron.image = self.chevronImage
+            self.dataArray = self.searchText.isEmpty ? self.optionArray : self.optionArray.filter {
+                $0.range(of: self.searchText, options: .caseInsensitive) != nil
+            }
+            
+            self.resizeTable()
+            self.selectedIndex = nil
+            self.reloadData()
         }
     }
-	
-	@IBInspectable public var isSearchEnable: Bool = false {
-		didSet {
-			addGesture()
-		}
-	}
-	
-	@IBInspectable public var chevronSize: CGFloat = 15 {
-		didSet{
-            let center = self.chevron.superview!.center
-            self.chevron.frame = CGRect(x: center.x - chevronSize/2, y: center.y - chevronSize/2, width: chevronSize, height: chevronSize)
-		}
-	}
-	@IBInspectable public var chevronColor: UIColor = .label {
-		didSet{
-            self.chevron.tintColor = chevronColor
-		}
-	}
-
-	@IBInspectable public var borderColor: UIColor = .systemGray6 {
-		didSet {
-			layer.borderColor = borderColor.cgColor
-		}
-	}
-	@IBInspectable public var borderWidth: CGFloat = 0.0 {
-		didSet {
-			layer.borderWidth = borderWidth
-		}
-	}
     
+    fileprivate var didSelectCompletion: ((String, Int, Int) -> Void) = { _, _, _ in }
+    fileprivate var tableViewWillAppearHandler: (() -> Void) = {}
+    fileprivate var tableViewDidAppearHandler: (() -> Void) = {}
+    fileprivate var tableViewWillDisappearHandler: (() -> Void) = {}
+    fileprivate var tableViewDidDisappearHandler: (() -> Void) = {}
+    
+    @IBInspectable public var rowHeight: CGFloat = 40
+    @IBInspectable public var animationDuration: TimeInterval = 0.3
+    @IBInspectable public var rowBackgroundColor: UIColor = .systemGray6
+    @IBInspectable public var rowTextColor: UIColor = .label
+    @IBInspectable public var selectedRowColor: UIColor = .clear
+    @IBInspectable public var hideOptionsOnSelect = true
+    @IBInspectable public var checkMarkEnabled: Bool = true
+    @IBInspectable public var handleKeyboard: Bool = true
+    @IBInspectable public var flashIndicatorWhenOpeningList: Bool = true
+    @IBInspectable public var scrollToSelectedItem: Bool = true
+    @IBInspectable public var imageCellIsRounded: Bool = false
+    @IBInspectable public var showTableBorder: Bool = false
+    @IBInspectable public var tableViewCornerRadius: CGFloat = 8
+    @IBInspectable public var listHeight: CGFloat = 150
+    @IBInspectable public var borderColor: UIColor = .systemGray6 {
+        didSet { self.layer.borderColor = self.borderColor.cgColor }
+    }
+    @IBInspectable public var borderWidth: CGFloat = 0 {
+        didSet { self.layer.borderWidth = self.borderWidth }
+    }
     @IBInspectable public var padding = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 0) {
+        didSet { self.layoutIfNeeded() }
+    }
+    @IBInspectable public var chevronSize: CGFloat = 15 {
         didSet {
-            self.layoutIfNeeded()
+            let center = self.chevronImageView.superview!.center ; let size = self.chevronSize
+            self.chevronImageView.frame = CGRect(x: center.x - size / 2, y: center.y - size / 2, width: size, height: size)
+        }
+    }
+    @IBInspectable public var chevronColor: UIColor = .label {
+        didSet { self.chevronImageView.tintColor = self.chevronColor }
+    }
+    @IBInspectable public var chevronImage: UIImage = UIImage(systemName: "chevron.down")! {
+        didSet { self.chevronImageView.image = self.chevronImage }
+    }
+    @IBInspectable public var isSearchEnable: Bool = false {
+        didSet { self.addGestures() }
+    }
+    @IBInspectable public var tableViewCellFont: UIFont = .systemFont(ofSize: 17)
+    
+    public var selectedIndex: Int? {
+        didSet {
+            guard let selectedIndex = self.selectedIndex else { return }
+            self.text = self.optionArray[selectedIndex]
+        }
+    }
+    
+    public var optionArray = [String]() {
+        didSet {
+            self.dataArray = self.optionArray
+            self.selectedIndex = 0
+        }
+    }
+    
+    public var optionImageArray = [String]() {
+        didSet { self.imageArray = self.optionImageArray }
+    }
+    
+    public var optionIds: [Int]?
+    
+    public var selectedItemTitle: String {
+        return self.text ?? ""
+    }
+
+    public override init(frame: CGRect) {
+        super.init(frame: frame)
+        
+        self.setupUI()
+        self.delegate = self
+    }
+
+    public required init(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)!
+        
+        self.setupUI()
+        self.delegate = self
+    }
+
+    private func setupUI() {
+        let size = self.frame.height
+        
+        self.configureRightView(with: size)
+        self.configureBackgroundView()
+        self.observeKeyboardNotifications()
+        self.addGestures()
+    }
+
+    private func configureRightView(with size: CGFloat) {
+        let rightView = UIView(frame: CGRect(x: 0, y: 0, width: size, height: size))
+        self.rightView = rightView
+        self.rightViewMode = .always
+        let chevronContainerView = UIView(frame: rightView.frame)
+        self.rightView?.addSubview(chevronContainerView)
+        self.setupChevron(in: chevronContainerView)
+    }
+
+    private func setupChevron(in containerView: UIView) {
+        let containerCenter = containerView.center
+        self.chevronImageView = UIImageView(frame: CGRect(x: containerCenter.x - self.chevronSize/2, y: containerCenter.y - self.chevronSize/2, width: self.chevronSize, height: self.chevronSize))
+        self.chevronImageView.image = self.chevronImage
+        self.chevronImageView.contentMode = .scaleAspectFit
+        self.chevronImageView.tintColor = self.chevronColor
+        containerView.addSubview(self.chevronImageView)
+    }
+
+    private func configureBackgroundView() {
+        self.backgroundView = UIView(frame: .zero)
+        self.backgroundView.backgroundColor = .clear
+    }
+
+    private func observeKeyboardNotifications() {
+        guard self.isSearchEnable, self.handleKeyboard else { return }
+        
+        NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: nil) { (notification) in
+            if self.isFirstResponder {
+                let keyboardFrame = (notification.userInfo![UIResponder.keyboardFrameEndUserInfoKey] as! NSValue).cgRectValue
+                self.keyboardHeight = keyboardFrame.height
+                if !self.isSelected {
+                    self.showList()
+                }
+            }
+        }
+        NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: nil) { (notification) in
+            if self.isFirstResponder {
+                self.keyboardHeight = 0
+            }
         }
     }
 
-	//Variables
-	fileprivate var tableheightX: CGFloat = 100
-	fileprivate var dataArray = [String]()
-	fileprivate var imageArray = [String]()
-	fileprivate weak var parentController: UIViewController?
-	fileprivate var pointToParent = CGPoint(x: 0, y: 0)
-	fileprivate var backgroundView = UIView()
-	fileprivate var keyboardHeight: CGFloat = 0
+    private func addGestures() {
+        let touchActionGesture = UITapGestureRecognizer(target: self, action: #selector(self.touchAction))
+        if self.isSearchEnable {
+            self.rightView?.addGestureRecognizer(touchActionGesture)
+        } else {
+            self.addGestureRecognizer(touchActionGesture)
+        }
 
-	public var optionArray = [String]() {
-		didSet{
-			self.dataArray = self.optionArray
-			self.selectedIndex = 0
-		}
-	}
-	public var optionImageArray = [String]() {
-		didSet{
-			self.imageArray = self.optionImageArray
-		}
-	}
-	public var optionIds : [Int]?
-	
-	public var tableCellFont: UIFont = .systemFont(ofSize: 17)
-	
-	var searchText = String() {
-		didSet{
-			if searchText == "" {
-				self.dataArray = self.optionArray
-			}else{
-				self.dataArray = optionArray.filter {
-					return $0.range(of: searchText, options: .caseInsensitive) != nil
-				}
-			}
-			reSizeTable()
-			selectedIndex = nil
-			self.table.reloadData()
-		}
-	}
-	
-	public var selectedItemTitle: String {
-		return self.text ?? ""
-	}
+        let backgroundViewGesture = UITapGestureRecognizer(target: self, action: #selector(self.touchAction))
+        self.backgroundView.addGestureRecognizer(backgroundViewGesture)
+    }
+    
+    public func showList() {
+        guard let parentController = self.parentViewController else { return }
 
-	// Init
-	public override init(frame: CGRect) {
-		super.init(frame: frame)
-		setupUI()
-		self.delegate = self
-	}
+        self.backgroundView.frame = parentController.view.frame
+        self.pointToParent = self.getConvertedPoint(for: self, relativeTo: parentController.view)
+        parentController.view.insertSubview(self.backgroundView, aboveSubview: self)
 
-	public required init(coder aDecoder: NSCoder) {
-		super.init(coder: aDecoder)!
-		setupUI()
-		self.delegate = self
-	}
-
-
-	//MARK: Closures
-	fileprivate var didSelectCompletion: (String, Int ,Int) -> () = {selectedText, index , id  in }
-	fileprivate var TableWillAppearCompletion: () -> () = { }
-	fileprivate var TableDidAppearCompletion: () -> () = { }
-	fileprivate var TableWillDisappearCompletion: () -> () = { }
-	fileprivate var TableDidDisappearCompletion: () -> () = { }
-
-	func setupUI () {
-		let size = self.frame.height
-		let paddingView: UIView = UIView(frame: CGRect(x: 0, y: 0, width: 4, height: size))
-		self.leftView = paddingView
-		self.leftViewMode = .always
-		let rightView = UIView(frame: CGRect(x: 0.0, y: 0.0, width: size, height: size))
-		self.rightView = rightView
-		self.rightViewMode = .always
-		let chevronContainerView = UIView(frame: rightView.frame)
-		self.rightView?.addSubview(chevronContainerView)
+        self.tableViewWillAppearHandler()
+        self.tableViewHeightX = min(self.listHeight, self.rowHeight * CGFloat(self.dataArray.count))
+        self.configureTableView(in: parentController)
         
-        let containerCenter = chevronContainerView.center
-        self.chevron = UIImageView(frame: CGRect(x: containerCenter.x - chevronSize/2, y: containerCenter.y - chevronSize/2, width: self.chevronSize, height: self.chevronSize))
-        self.chevron.image = self.chevronImage
-        self.chevron.contentMode = .scaleAspectFit
-        self.chevron.tintColor = self.chevronColor
-        chevronContainerView.addSubview(self.chevron)
+        self.isSelected = true
+        
+        self.adjustTablePositionAccordingToKeyboardHeight(in: parentController)
+        self.animateTablePresentation()
+    }
 
-		self.backgroundView = UIView(frame: .zero)
-		self.backgroundView.backgroundColor = .clear
-		addGesture()
-		if isSearchEnable && handleKeyboard{
-			NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: nil) { (notification) in
-				if self.isFirstResponder{
-				let userInfo:NSDictionary = notification.userInfo! as NSDictionary
-					let keyboardFrame:NSValue = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as! NSValue
-				let keyboardRectangle = keyboardFrame.cgRectValue
-				self.keyboardHeight = keyboardRectangle.height
-					if !self.isSelected{
-						self.showList()
-					}
-				}
-			  
-			}
-			NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: nil) { (notification) in
-				if self.isFirstResponder{
-				self.keyboardHeight = 0
-				}
-			}
-		}
-	}
-	
-	deinit {
-		NotificationCenter.default.removeObserver(self)
-	}
+    private func configureTableView(in parentController: UIViewController) {
+        self.tableView = UITableView(frame: CGRect(x: self.pointToParent.x, y: self.pointToParent.y + self.frame.height, width: self.frame.width, height: self.frame.height))
+        self.tableView.dataSource = self
+        self.tableView.delegate = self
+        self.tableView.alpha = 0
+        self.tableView.separatorStyle = .singleLine
+        self.tableView.layer.cornerRadius = self.tableViewCornerRadius
+        self.tableView.backgroundColor = self.rowBackgroundColor
+        self.tableView.rowHeight = self.rowHeight
 
-	
-	fileprivate func addGesture() {
-		let gesture =  UITapGestureRecognizer(target: self, action:  #selector(touchAction))
-		if isSearchEnable {
-			self.rightView?.addGestureRecognizer(gesture)
-		} else {
-			self.addGestureRecognizer(gesture)
-		}
-		let gesture2 =  UITapGestureRecognizer(target: self, action:  #selector(touchAction))
-		self.backgroundView.addGestureRecognizer(gesture2)
-	}
-	func getConvertedPoint(_ targetView: UIView, baseView: UIView?) -> CGPoint {
-		var pnt = targetView.frame.origin
-		if nil == targetView.superview{
-			return pnt
-		}
-		var superView = targetView.superview
-		while superView != baseView{
-			pnt = superView!.convert(pnt, to: superView!.superview)
-			if nil == superView!.superview{
-				break
-			} else {
-				superView = superView!.superview
-			}
-		}
-		return superView!.convert(pnt, to: baseView)
-	}
-	public func showList() {
-		if parentController == nil {
-			parentController = self.parentViewController
-		}
-		backgroundView.frame = parentController?.view.frame ?? backgroundView.frame
-		pointToParent = getConvertedPoint(self, baseView: parentController?.view)
-		parentController?.view.insertSubview(backgroundView, aboveSubview: self)
-		TableWillAppearCompletion()
-		if listHeight > rowHeight * CGFloat( dataArray.count) {
-			self.tableheightX = rowHeight * CGFloat(dataArray.count)
-		} else {
-			self.tableheightX = listHeight
-		}
-		table = UITableView(frame: CGRect(x: pointToParent.x ,
-										  y: pointToParent.y + self.frame.height ,
-										  width: self.frame.width,
-										  height: self.frame.height))
-		shadow = UIView(frame: table.frame)
-		shadow.backgroundColor = .clear
+        self.configureTableBorder()
 
-		table.dataSource = self
-		table.delegate = self
-		table.alpha = 0
-		table.separatorStyle = .singleLine
-        table.layer.cornerRadius = self.tableCornerRadius
-		
-		if self.showTableBorder {
-			table.layer.borderColor = self.borderColor.cgColor
-			table.layer.borderWidth = self.borderWidth > 0 ? self.borderWidth : 1
-		}
-		
-		table.backgroundColor = rowBackgroundColor
-		table.rowHeight = rowHeight
-		parentController?.view.addSubview(shadow)
-		parentController?.view.addSubview(table)
-		self.isSelected = true
-		let height = (self.parentController?.view.frame.height ?? 0) - (self.pointToParent.y + self.frame.height + 5)
-		var y = self.pointToParent.y+self.frame.height+5
-		if height < (keyboardHeight+tableheightX){
-			y = self.pointToParent.y - tableheightX
-		}
-		
-		UIView.animate(withDuration: self.animationDuration, delay: 0, options: .curveEaseInOut) {
-			self.table.frame = CGRect(x: self.pointToParent.x,
-									  y: y,
-									  width: self.frame.width,
-									  height: self.tableheightX)
-			self.table.alpha = 1
-			self.shadow.frame = self.table.frame
-//			self.shadow.dropShadow()
-            self.chevron.transform = CGAffineTransform(rotationAngle: .pi)
-		} completion: { finished in
-			self.layoutIfNeeded()
-			
-			if self.flashIndicatorWhenOpeningList {
-				DispatchQueue.main.async {
-					self.table.flashScrollIndicators()
-				}
-			}
-			if self.scrollToSelectedItem {
-				if let selectedIndex = self.selectedIndex {
-					self.table.scrollToRow(at: IndexPath(row: selectedIndex, section: 0), at: .middle, animated: true)
-				}
-			}
-			
-			self.TableDidAppearCompletion()
-		}
-	}
+        self.shadowView = UIView(frame: self.tableView.frame)
+        self.shadowView.backgroundColor = .clear
 
+        parentController.view.addSubview(self.shadowView)
+        parentController.view.addSubview(self.tableView)
+    }
 
-	public func hideList() {
-		TableWillDisappearCompletion()
-		UIView.animate(withDuration: self.animationDuration, delay: 0,
-					   usingSpringWithDamping: 0.9,
-					   initialSpringVelocity: 0.1,
-					   options: .curveEaseInOut,
-					   animations: { () -> Void in
-						self.table.frame = CGRect(x: self.pointToParent.x,
-												  y: self.pointToParent.y+self.frame.height,
-												  width: self.frame.width,
-												  height: 0)
-						self.shadow.alpha = 0
-						self.shadow.frame = self.table.frame
-                        self.chevron.transform = CGAffineTransform.identity
-		},
-					   completion: { (didFinish) -> Void in
+    private func configureTableBorder() {
+        if self.showTableBorder {
+            self.tableView.layer.borderColor = self.borderColor.cgColor
+            self.tableView.layer.borderWidth = self.borderWidth > 0 ? self.borderWidth : 1
+        }
+    }
 
-						self.shadow.removeFromSuperview()
-						self.table.removeFromSuperview()
-						self.backgroundView.removeFromSuperview()
-						self.isSelected = false
-						self.TableDidDisappearCompletion()
-		})
-	}
+    private func adjustTablePositionAccordingToKeyboardHeight(in parentController: UIViewController) {
+        let availableHeight = (parentController.view.frame.height) - (self.pointToParent.y + self.frame.height + 5)
+        var yPosition = self.pointToParent.y + self.frame.height + 5
 
-	@objc public func touchAction() {
-		isSelected ?  hideList() : showList()
-	}
-	func reSizeTable() {
-		if listHeight > rowHeight * CGFloat( dataArray.count) {
-			self.tableheightX = rowHeight * CGFloat(dataArray.count)
-		}else{
-			self.tableheightX = listHeight
-		}
-		let height = (self.parentController?.view.frame.height ?? 0) - (self.pointToParent.y + self.frame.height + 5)
-		var y = self.pointToParent.y+self.frame.height+5
-		if height < (keyboardHeight+tableheightX){
-			y = self.pointToParent.y - tableheightX
-		}
-		UIView.animate(withDuration: self.animationDuration,
-					   delay: 0,
-					   usingSpringWithDamping: 0.9,
-					   initialSpringVelocity: 0.1,
-					   options: .curveEaseInOut,
-					   animations: { () -> Void in
-						self.table.frame = CGRect(x: self.pointToParent.x,
-												  y: y,
-												  width: self.frame.width,
-												  height: self.tableheightX)
-						self.shadow.frame = self.table.frame
-//                        self.shadow.dropShadow()
+        if availableHeight < (self.keyboardHeight + self.tableViewHeightX) {
+            yPosition = self.pointToParent.y - self.tableViewHeightX
+        }
 
-		},
-					   completion: { (didFinish) -> Void in
-					  //  self.shadow.layer.shadowPath = UIBezierPath(rect: self.table.bounds).cgPath
-						self.layoutIfNeeded()
+        self.tableView.frame.origin.y = yPosition
+    }
 
-		})
-	}
+    private func animateTablePresentation() {
+        UIView.animate(withDuration: self.animationDuration, delay: 0, options: .curveEaseInOut) {
+            self.tableView.frame.size.height = self.tableViewHeightX
+            self.tableView.alpha = 1
+            self.shadowView.frame = self.tableView.frame
+            self.chevronImageView.transform = CGAffineTransform(rotationAngle: .pi)
+        } completion: { [weak self] _ in
+            self?.layoutIfNeeded()
+            self?.flashScrollIndicatorsIfNeeded()
+            self?.scrollToSelectedRowIfNeeded()
+            self?.tableViewDidAppearHandler()
+        }
+    }
 
-	//MARK: Actions Methods
+    private func flashScrollIndicatorsIfNeeded() {
+        if self.flashIndicatorWhenOpeningList {
+            DispatchQueue.main.async {
+                self.tableView.flashScrollIndicators()
+            }
+        }
+    }
+
+    private func scrollToSelectedRowIfNeeded() {
+        if self.scrollToSelectedItem, let selectedIndex = self.selectedIndex {
+            self.tableView.scrollToRow(at: IndexPath(row: selectedIndex, section: 0), at: .middle, animated: true)
+        }
+    }
+
+    public func hideList() {
+        self.tableViewWillDisappearHandler()
+        
+        UIView.animate(withDuration: self.animationDuration, delay: 0, usingSpringWithDamping: 0.9, initialSpringVelocity: 0.1, options: .curveEaseInOut) {
+            self.tableView.frame = CGRect(x: self.pointToParent.x, y: self.pointToParent.y + self.frame.height, width: self.frame.width, height: 0)
+            self.shadowView.alpha = 0
+            self.shadowView.frame = self.tableView.frame
+            self.chevronImageView.transform = CGAffineTransform.identity
+        } completion: { [weak self] _ in
+            self?.shadowView.removeFromSuperview()
+            self?.tableView.removeFromSuperview()
+            self?.backgroundView.removeFromSuperview()
+            self?.isSelected = false
+            self?.tableViewDidDisappearHandler()
+        }
+    }
+
+    @objc public func touchAction() {
+        self.isSelected ? self.hideList() : self.showList()
+    }
+
+    func resizeTable() {
+        self.tableViewHeightX = min(self.listHeight, self.rowHeight * CGFloat(self.dataArray.count))
+        let availableHeight = (self.parentController?.view.frame.height ?? 0) - (self.pointToParent.y + frame.height + 5)
+        var yPosition = self.pointToParent.y + frame.height + 5
+
+        if availableHeight < (self.keyboardHeight + self.tableViewHeightX) {
+            yPosition = self.pointToParent.y - self.tableViewHeightX
+        }
+
+        UIView.animate(withDuration: self.animationDuration, delay: 0, usingSpringWithDamping: 0.9, initialSpringVelocity: 0.1, options: .curveEaseInOut) {
+            self.tableView.frame = CGRect(x: self.pointToParent.x, y: yPosition, width: self.frame.width, height: self.tableViewHeightX)
+            self.shadowView.frame = self.tableView.frame
+        } completion: { [weak self] _ in
+            self?.layoutIfNeeded()
+        }
+    }
+
 	public func didSelect(completion: @escaping (_ selectedText: String, _ index: Int , _ id:Int ) -> ()) {
 		didSelectCompletion = completion
 	}
 
 	public func listWillAppear(completion: @escaping () -> ()) {
-		TableWillAppearCompletion = completion
+        self.tableViewWillAppearHandler = completion
 	}
 
 	public func listDidAppear(completion: @escaping () -> ()) {
-		TableDidAppearCompletion = completion
+        self.tableViewDidAppearHandler = completion
 	}
 
 	public func listWillDisappear(completion: @escaping () -> ()) {
-		TableWillDisappearCompletion = completion
+        self.tableViewWillDisappearHandler = completion
 	}
 
 	public func listDidDisappear(completion: @escaping () -> ()) {
-		TableDidDisappearCompletion = completion
+        self.tableViewDidDisappearHandler = completion
 	}
 
     override open func textRect(forBounds bounds: CGRect) -> CGRect {
@@ -374,136 +328,95 @@ open class RSDropDown: UITextField {
     override open func editingRect(forBounds bounds: CGRect) -> CGRect {
         return bounds.inset(by: self.padding)
     }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
 }
 
-//MARK: UITextFieldDelegate
-extension RSDropDown : UITextFieldDelegate {
-	public func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-		superview?.endEditing(true)
-		return false
-	}
-	public func textFieldDidBeginEditing(_ textField: UITextField) {
-		textField.text = ""
-		//self.selectedIndex = nil
-		self.dataArray = self.optionArray
-		touchAction()
-	}
-	public func textFieldShouldBeginEditing(_ textField: UITextField) -> Bool {
-		return isSearchEnable
-	}
+// textfield delegate
+extension RSDropDown: UITextFieldDelegate {
+    public func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        self.superview?.endEditing(true)
+        return false
+    }
 
-	public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-		if string != "" {
-			self.searchText = self.text! + string
-		}else{
-			let subText = self.text?.dropLast()
-			self.searchText = String(subText!)
-		}
-		if !isSelected {
-			showList()
-		}
-		return true;
-	}
+    public func textFieldDidBeginEditing(_ textField: UITextField) {
+        self.text = ""
+        self.dataArray = self.optionArray
+        self.touchAction()
+    }
 
+    public func textFieldShouldBeginEditing(_ textField: UITextField) -> Bool {
+        return self.isSearchEnable
+    }
+
+    public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        self.searchText = string.isEmpty ? String(text!.dropLast()) : text! + string
+        if !self.isSelected {
+            self.showList()
+        }
+        return true
+    }
 }
-///MARK: UITableViewDataSource
-extension RSDropDown: UITableViewDataSource {
 
-	public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-		return dataArray.count
-	}
+// tableview delegate
+extension RSDropDown: UITableViewDataSource, UITableViewDelegate {
+    public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return self.dataArray.count
+    }
 
-	public func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-		let cell = UITableViewCell(style: .default, reuseIdentifier: "DropDownCell")
+    public func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = UITableViewCell(style: .default, reuseIdentifier: "DropDownCell")
+        cell.backgroundColor = indexPath.row != self.selectedIndex ? self.rowBackgroundColor : self.selectedRowColor
 
-		cell.backgroundColor = indexPath.row != self.selectedIndex ? self.rowBackgroundColor : self.selectedRowColor
+        if self.imageArray.indices.contains(indexPath.row) {
+            let imageViewScale: CGFloat = 0.75
+            cell.imageView?.image = self.resize(image: UIImage(named: self.imageArray[indexPath.row])!, to: CGSize(width: self.rowHeight * imageViewScale, height: self.rowHeight * imageViewScale))
+            cell.imageView?.contentMode = .center
+            cell.imageView?.clipsToBounds = true
+            cell.imageView?.layer.cornerRadius = self.imageCellIsRounded ? (self.rowHeight * imageViewScale) / 2 : 0
+        }
 
-		if self.imageArray.count > indexPath.row {
-			let imageViewScale: CGFloat = 0.75
-			cell.imageView?.image = self.resizeImage(UIImage(named: imageArray[indexPath.row])!, withSize: CGSize(width: self.rowHeight*imageViewScale, height: self.rowHeight*imageViewScale))
-			cell.imageView?.contentMode = .center
-			cell.imageView?.clipsToBounds = true
-			cell.imageView?.layer.cornerRadius = self.imageCellIsRounded ? (self.rowHeight*imageViewScale)/2 : 0
-		}
-		
-		cell.textLabel?.text = "\(dataArray[indexPath.row])"
+        cell.textLabel?.text = "\(self.dataArray[indexPath.row])"
         cell.textLabel?.textColor = self.rowTextColor
-		cell.accessoryType = (indexPath.row == selectedIndex) && checkMarkEnabled ? .checkmark : .none
-		cell.selectionStyle = .none
-		cell.tintColor = cell.textLabel?.textColor ?? .label
-		cell.textLabel?.font = self.tableCellFont
-		cell.textLabel?.textAlignment = self.textAlignment
-		cell.textLabel?.numberOfLines = 0
-		cell.textLabel?.lineBreakMode = .byWordWrapping
-		
-		return cell
-	}
+        cell.accessoryType = (indexPath.row == self.selectedIndex) && self.checkMarkEnabled ? .checkmark : .none
+        cell.selectionStyle = .none
+        cell.tintColor = cell.textLabel?.textColor ?? .label
+        cell.textLabel?.font = self.tableViewCellFont
+        cell.textLabel?.textAlignment = textAlignment
+        cell.textLabel?.numberOfLines = 0
+        cell.textLabel?.lineBreakMode = .byWordWrapping
+
+        return cell
+    }
+
+    public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        self.selectedIndex = indexPath.row
+        let selectedText = self.dataArray[selectedIndex!]
+        tableView.cellForRow(at: indexPath)?.alpha = 0
+
+        UIView.animate(withDuration: 0.3, animations: {
+            tableView.cellForRow(at: indexPath)?.alpha = 1.0
+            tableView.cellForRow(at: indexPath)?.backgroundColor = self.selectedRowColor
+        }) { [weak self] _ in
+            self?.text = "\(selectedText)"
+            self?.reloadData()
+        }
+
+        if self.hideOptionsOnSelect {
+            self.touchAction()
+            self.endEditing(true)
+        }
+
+        if let selected = self.optionArray.firstIndex(where: { $0 == selectedText }) {
+            self.didSelectCompletion(selectedText, selected, self.optionIds?[selected] ?? 0)
+        }
+    }
 }
 
-extension RSDropDown {
-	func resizeImage( _ image: UIImage, withSize newSize: CGSize) -> UIImage {
-		UIGraphicsBeginImageContext(newSize)
-		image.draw(in: CGRect(x: 0, y: 0, width: newSize.width, height: newSize.height))
-		let newImage = UIGraphicsGetImageFromCurrentImageContext()
-		UIGraphicsEndImageContext()
-		return newImage!
-	}
-}
-
-//MARK: UITableViewDelegate
-extension RSDropDown: UITableViewDelegate {
-	public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-		selectedIndex = (indexPath as NSIndexPath).row
-		let selectedText = self.dataArray[self.selectedIndex!]
-		tableView.cellForRow(at: indexPath)?.alpha = 0
-		UIView.animate(withDuration: 0.5,
-					   animations: { () -> Void in
-						tableView.cellForRow(at: indexPath)?.alpha = 1.0
-						tableView.cellForRow(at: indexPath)?.backgroundColor = self.selectedRowColor
-		} ,
-					   completion: { (didFinish) -> Void in
-						self.text = "\(selectedText)"
-
-						tableView.reloadData()
-		})
-		if hideOptionsWhenSelect {
-			touchAction()
-			self.endEditing(true)
-		}
-		if let selected = optionArray.firstIndex(where: {$0 == selectedText}) {
-			if let id = optionIds?[selected] {
-				didSelectCompletion(selectedText, selected , id )
-			}else{
-				didSelectCompletion(selectedText, selected , 0)
-			}
-
-		}
-
-	}
-}
-
+// extensions
 fileprivate extension UIView {
-
-	func dropShadow(scale: Bool = true) {
-		layer.masksToBounds = false
-		layer.shadowColor = UIColor.label.cgColor
-		layer.shadowOpacity = 0.3
-		layer.shadowOffset = CGSize(width: 1, height: 1)
-		layer.shadowRadius = 1
-		layer.shadowPath = UIBezierPath(rect: bounds).cgPath
-		layer.shouldRasterize = true
-		layer.rasterizationScale = scale ? UIScreen.main.scale : 1
-	}
-	
-	func viewBorder(borderColor : UIColor, borderWidth : CGFloat?) {
-		self.layer.borderColor = borderColor.cgColor
-		if let borderWidth_ = borderWidth {
-			self.layer.borderWidth = borderWidth_
-		} else {
-			self.layer.borderWidth = 1.0
-		}
-	}
-	
 	var parentViewController: UIViewController? {
 		var parentResponder: UIResponder? = self
 		while parentResponder != nil {
@@ -514,4 +427,40 @@ fileprivate extension UIView {
 		}
 		return nil
 	}
+}
+
+// helpers
+fileprivate extension RSDropDown {
+    func reloadData() {
+        DispatchQueue.main.async {
+            self.tableView.reloadData()
+        }
+    }
+    
+    func getConvertedPoint(for targetView: UIView, relativeTo baseView: UIView?) -> CGPoint {
+        var point = targetView.frame.origin
+        guard let superView = targetView.superview else {
+            return point
+        }
+
+        var currentSuperView = superView
+        while currentSuperView != baseView {
+            point = currentSuperView.convert(point, to: currentSuperView.superview)
+            if currentSuperView.superview == nil {
+                break
+            } else {
+                currentSuperView = currentSuperView.superview!
+            }
+        }
+
+        return currentSuperView.convert(point, to: baseView)
+    }
+    
+    func resize(image: UIImage, to newSize: CGSize) -> UIImage {
+        UIGraphicsBeginImageContext(newSize)
+        image.draw(in: CGRect(x: 0, y: 0, width: newSize.width, height: newSize.height))
+        let resizedImage = UIGraphicsGetImageFromCurrentImageContext()!
+        UIGraphicsEndImageContext()
+        return resizedImage
+    }
 }
