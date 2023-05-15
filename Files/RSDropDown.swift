@@ -1,9 +1,8 @@
 //
 //  RSDropDown
 //
-//  Created by Radu Ursache.
+//  Created by Radu Ursache (RanduSoft)
 //
-//  v2.0
 
 import UIKit
 
@@ -47,7 +46,8 @@ open class RSDropDown: UITextField {
     @IBInspectable public var flashIndicatorWhenOpeningList: Bool = true
     @IBInspectable public var scrollToSelectedItem: Bool = true
     @IBInspectable public var imageCellIsRounded: Bool = false
-    @IBInspectable public var showTableBorder: Bool = false
+    @IBInspectable public var showTableViewBorder: Bool = false
+    @IBInspectable public var showTableViewShadow: Bool = false
     @IBInspectable public var tableViewCornerRadius: CGFloat = 8
     @IBInspectable public var listHeight: CGFloat = 150
     @IBInspectable public var borderColor: UIColor = .systemGray6 {
@@ -229,7 +229,7 @@ open class RSDropDown: UITextField {
     }
 
     private func configureTableBorder() {
-        if self.showTableBorder {
+        if self.showTableViewBorder {
             self.tableView.layer.borderColor = self.borderColor.cgColor
             self.tableView.layer.borderWidth = self.borderWidth > 0 ? self.borderWidth : 1
         }
@@ -250,6 +250,7 @@ open class RSDropDown: UITextField {
         UIView.animate(withDuration: self.animationDuration, delay: 0, options: .curveEaseInOut) {
             self.tableView.frame.size.height = self.tableViewHeightX
             self.tableView.alpha = 1
+            if self.showTableViewShadow { self.shadowView.alpha = 1 }
             self.shadowView.frame = self.tableView.frame
             self.chevronImageView.transform = CGAffineTransform(rotationAngle: .pi)
         } completion: { [weak self] _ in
@@ -383,8 +384,12 @@ extension RSDropDown: UITableViewDataSource, UITableViewDelegate {
 
     public func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell(style: .default, reuseIdentifier: "DropDownCell")
+        
         cell.backgroundColor = indexPath.row != self.selectedIndex ? self.rowBackgroundColor : self.selectedRowColor
-
+        cell.accessoryType = (indexPath.row == self.selectedIndex) && self.checkMarkEnabled ? .checkmark : .none
+        cell.selectionStyle = .none
+        cell.tintColor = cell.textLabel?.textColor ?? .label
+        
         if self.imageArray.indices.contains(indexPath.row) {
             let imageViewScale: CGFloat = 0.75
             cell.imageView?.image = self.resize(image: UIImage(named: self.imageArray[indexPath.row])!, to: CGSize(width: self.rowHeight * imageViewScale, height: self.rowHeight * imageViewScale))
@@ -395,11 +400,8 @@ extension RSDropDown: UITableViewDataSource, UITableViewDelegate {
 
         cell.textLabel?.text = "\(self.dataArray[indexPath.row])"
         cell.textLabel?.textColor = self.rowTextColor
-        cell.accessoryType = (indexPath.row == self.selectedIndex) && self.checkMarkEnabled ? .checkmark : .none
-        cell.selectionStyle = .none
-        cell.tintColor = cell.textLabel?.textColor ?? .label
         cell.textLabel?.font = self.tableViewCellFont
-        cell.textLabel?.textAlignment = textAlignment
+        cell.textLabel?.textAlignment = self.textAlignment
         cell.textLabel?.numberOfLines = 0
         cell.textLabel?.lineBreakMode = .byWordWrapping
 
@@ -412,7 +414,7 @@ extension RSDropDown: UITableViewDataSource, UITableViewDelegate {
         tableView.cellForRow(at: indexPath)?.alpha = 0
 
         UIView.animate(withDuration: 0.3, animations: {
-            tableView.cellForRow(at: indexPath)?.alpha = 1.0
+            tableView.cellForRow(at: indexPath)?.alpha = 1
             tableView.cellForRow(at: indexPath)?.backgroundColor = self.selectedRowColor
         }) { [weak self] _ in
             self?.text = "\(selectedText)"
@@ -424,8 +426,8 @@ extension RSDropDown: UITableViewDataSource, UITableViewDelegate {
             self.endEditing(true)
         }
 
-        if let selected = self.optionArray.firstIndex(where: { $0 == selectedText }) {
-            self.didSelectCompletion(selectedText, selected, self.optionIds?[selected] ?? 0)
+        if let selectedIndex = self.optionArray.firstIndex(where: { $0 == selectedText }) {
+            self.didSelectCompletion(selectedText, selectedIndex, self.optionIds?[selectedIndex] ?? 0)
         }
     }
 }
