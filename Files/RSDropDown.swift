@@ -102,6 +102,12 @@ open class RSDropDown: UITextField {
     public var selectedItemTitle: String {
         return self.text ?? ""
     }
+    
+    override open var placeholder: String? {
+        didSet {
+            self.selectedIndex = nil
+        }
+    }
 
     public override init(frame: CGRect) {
         super.init(frame: frame)
@@ -182,7 +188,7 @@ open class RSDropDown: UITextField {
     
     public func showList() {
         guard let parentController = self.parentViewController else { return }
-        guard self.optionArray.count > 0 else {
+        guard self.dataArray.count > 0 else {
             print("[RSDropDown] optionArray is empty, the table can't show") ; return
         }
 
