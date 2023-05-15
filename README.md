@@ -21,7 +21,8 @@ func setupDropDown() {
     self.dropDown.tableViewCornerRadius = 8
     self.dropDown.chevronSize = 20
     self.dropDown.chevronColor = .systemRed
-    self.dropDown.showTableBorder = true
+    self.dropDown.showTableViewBorder = true
+    self.dropDown.showTableViewShadow = false
     self.dropDown.cornerRadius = 10
     self.dropDown.padding = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 0)
     
@@ -29,10 +30,11 @@ func setupDropDown() {
     self.dropDown.rowHeight = 45
     self.dropDown.listHeight = self.dropDown.rowHeight * 4 // 4 items visible
     
+    self.dropDown.placeholder = "Pick one"
     self.dropDown.optionArray = (1...500).compactMap { "Option \($0)" }
     self.dropDown.didSelect { selectedItemText, selectedItemIndex, selectedItemId in
         print(selectedItemText, selectedItemIndex, selectedItemId)
     }
-    self.dropDown.selectedIndex = 2 // default selected index, optional
+    self.dropDown.selectedIndex = 2 // default selected index, optional. if not set, placeholder will show
 }
 ```
