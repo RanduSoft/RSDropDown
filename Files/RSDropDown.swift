@@ -86,7 +86,10 @@ open class RSDropDown: UITextField {
     public var optionArray = [String]() {
         didSet {
             self.dataArray = self.optionArray
-            self.selectedIndex = 0
+            
+            if self.placeholder == nil {
+                self.selectedIndex = 0
+            }
         }
     }
     
@@ -179,6 +182,9 @@ open class RSDropDown: UITextField {
     
     public func showList() {
         guard let parentController = self.parentViewController else { return }
+        guard self.optionArray.count > 0 else {
+            print("[RSDropDown] optionArray is empty, the table can't show") ; return
+        }
 
         self.backgroundView.frame = parentController.view.frame
         self.pointToParent = self.getConvertedPoint(for: self, relativeTo: parentController.view)
@@ -298,7 +304,7 @@ open class RSDropDown: UITextField {
     }
 
 	public func didSelect(completion: @escaping (_ selectedText: String, _ index: Int , _ id:Int ) -> ()) {
-		didSelectCompletion = completion
+        self.didSelectCompletion = completion
 	}
 
 	public func listWillAppear(completion: @escaping () -> ()) {
