@@ -78,8 +78,11 @@ open class RSDropDown: UITextField {
     
     public var selectedIndex: Int? {
         didSet {
-            guard let selectedIndex = self.selectedIndex else { return }
-            self.text = self.optionArray[selectedIndex]
+            if let selectedIndex = self.selectedIndex {
+                self.text = self.optionArray[selectedIndex]
+            } else {
+                self.text = nil
+            }
         }
     }
     
@@ -189,7 +192,7 @@ open class RSDropDown: UITextField {
     public func showList() {
         guard let parentController = self.parentViewController else { return }
         guard self.dataArray.count > 0 else {
-            print("[RSDropDown] optionArray is empty, the table can't show") ; return
+            print("[RSDropDown] ⚠️ optionArray is empty, the table can't be build") ; return
         }
 
         self.backgroundView.frame = parentController.view.frame
