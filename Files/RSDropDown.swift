@@ -78,6 +78,8 @@ open class RSDropDown: UITextField {
     }
     @IBInspectable public var tableViewCellFont: UIFont = .systemFont(ofSize: 17)
     
+    private var willShowTableViewUp: Bool = false
+    
     public var selectedIndex: Int? {
         didSet {
             if let selectedIndex = self.selectedIndex {
@@ -212,7 +214,7 @@ open class RSDropDown: UITextField {
     }
 
     private func configureTableView(in parentController: UIViewController) {
-        self.tableView = UITableView(frame: CGRect(x: self.listWidth == 0 ? self.pointToParent.x :  self.frame.midX - (self.listWidth / 2), y: self.pointToParent.y + self.frame.height + self.listSpacing, width: self.listWidth == 0 ? self.frame.width : self.listWidth, height: self.frame.height))
+        self.tableView = UITableView(frame: CGRect(x: self.listWidth == 0 ? self.pointToParent.x : self.pointToParent.x + (self.frame.width / 2) - (self.listWidth / 2), y: self.pointToParent.y + self.frame.height + self.listSpacing, width: self.listWidth == 0 ? self.frame.width : self.listWidth, height: self.frame.height))
         self.tableView.dataSource = self
         self.tableView.delegate = self
         self.tableView.alpha = 0
@@ -242,7 +244,10 @@ open class RSDropDown: UITextField {
         var yPosition = self.pointToParent.y + self.frame.height + self.listSpacing
 
         if availableHeight < (self.keyboardHeight + self.tableViewHeightX) {
-            yPosition = self.pointToParent.y - self.tableViewHeightX
+            yPosition = self.pointToParent.y - self.tableViewHeightX - self.listSpacing
+            self.willShowTableViewUp = true
+        } else {
+            self.willShowTableViewUp = false
         }
 
         self.tableView.frame.origin.y = yPosition
@@ -281,7 +286,7 @@ open class RSDropDown: UITextField {
         self.tableViewWillDisappearHandler()
         
         UIView.animate(withDuration: self.animationDuration, delay: 0, usingSpringWithDamping: 0.9, initialSpringVelocity: 0.1, options: .curveEaseInOut) {
-            self.tableView.frame = CGRect(x: self.pointToParent.x, y: self.pointToParent.y + self.frame.height, width: self.frame.width, height: 0)
+            self.tableView.frame = CGRect(x: self.pointToParent.x, y: self.pointToParent.y + (!self.willShowTableViewUp ? self.frame.height : 0), width: self.frame.width, height: 0)
             self.shadowView.alpha = 0
             self.shadowView.frame = self.tableView.frame
             self.chevronImageView.transform = CGAffineTransform.identity
@@ -300,8 +305,8 @@ open class RSDropDown: UITextField {
 
     func resizeTable() {
         self.tableViewHeightX = min(self.listHeight, self.rowHeight * CGFloat(self.dataArray.count))
-        let availableHeight = (self.parentController?.view.frame.height ?? 0) - (self.pointToParent.y + frame.height + self.listSpacing)
-        var yPosition = self.pointToParent.y + frame.height + self.listSpacing
+        let availableHeight = (self.parentController?.view.frame.height ?? 0) - (self.pointToParent.y + self.frame.height + self.listSpacing)
+        var yPosition = self.pointToParent.y + self.frame.height + self.listSpacing
 
         if availableHeight < (self.keyboardHeight + self.tableViewHeightX) {
             yPosition = self.pointToParent.y - self.tableViewHeightX
@@ -388,9 +393,8 @@ extension RSDropDown: UITableViewDataSource, UITableViewDelegate {
         let cell = UITableViewCell(style: .default, reuseIdentifier: "DropDownCell")
         
         cell.backgroundColor = indexPath.row != self.selectedIndex ? self.rowBackgroundColor : self.selectedRowColor
-        cell.accessoryType = (indexPath.row == self.selectedIndex) && self.checkMarkEnabled ? .checkmark : .none
+        
         cell.selectionStyle = .none
-        cell.tintColor = cell.textLabel?.textColor ?? .label
         
         if self.imageArray.indices.contains(indexPath.row) {
             let imageViewScale: CGFloat = 0.75
@@ -406,6 +410,9 @@ extension RSDropDown: UITableViewDataSource, UITableViewDelegate {
         cell.textLabel?.textAlignment = self.textAlignment
         cell.textLabel?.numberOfLines = 0
         cell.textLabel?.lineBreakMode = .byWordWrapping
+        
+        cell.accessoryType = (indexPath.row == self.selectedIndex) && self.checkMarkEnabled ? .checkmark : .none
+        cell.tintColor = self.rowTextColor
 
         return cell
     }
