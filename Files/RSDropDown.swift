@@ -50,6 +50,8 @@ open class RSDropDown: UITextField {
     @IBInspectable public var showTableViewShadow: Bool = false
     @IBInspectable public var tableViewCornerRadius: CGFloat = 8
     @IBInspectable public var listHeight: CGFloat = 150
+    @IBInspectable public var listWidth: CGFloat = 0
+    @IBInspectable public var listSpacing: CGFloat = 5
     @IBInspectable public var borderColor: UIColor = .systemGray6 {
         didSet { self.layer.borderColor = self.borderColor.cgColor }
     }
@@ -210,7 +212,7 @@ open class RSDropDown: UITextField {
     }
 
     private func configureTableView(in parentController: UIViewController) {
-        self.tableView = UITableView(frame: CGRect(x: self.pointToParent.x, y: self.pointToParent.y + self.frame.height, width: self.frame.width, height: self.frame.height))
+        self.tableView = UITableView(frame: CGRect(x: self.listWidth == 0 ? self.pointToParent.x :  self.frame.midX - (self.listWidth / 2), y: self.pointToParent.y + self.frame.height + self.listSpacing, width: self.listWidth == 0 ? self.frame.width : self.listWidth, height: self.frame.height))
         self.tableView.dataSource = self
         self.tableView.delegate = self
         self.tableView.alpha = 0
@@ -236,8 +238,8 @@ open class RSDropDown: UITextField {
     }
 
     private func adjustTablePositionAccordingToKeyboardHeight(in parentController: UIViewController) {
-        let availableHeight = (parentController.view.frame.height) - (self.pointToParent.y + self.frame.height + 5)
-        var yPosition = self.pointToParent.y + self.frame.height + 5
+        let availableHeight = (parentController.view.frame.height) - (self.pointToParent.y + self.frame.height + self.listSpacing)
+        var yPosition = self.pointToParent.y + self.frame.height + self.listSpacing
 
         if availableHeight < (self.keyboardHeight + self.tableViewHeightX) {
             yPosition = self.pointToParent.y - self.tableViewHeightX
@@ -298,8 +300,8 @@ open class RSDropDown: UITextField {
 
     func resizeTable() {
         self.tableViewHeightX = min(self.listHeight, self.rowHeight * CGFloat(self.dataArray.count))
-        let availableHeight = (self.parentController?.view.frame.height ?? 0) - (self.pointToParent.y + frame.height + 5)
-        var yPosition = self.pointToParent.y + frame.height + 5
+        let availableHeight = (self.parentController?.view.frame.height ?? 0) - (self.pointToParent.y + frame.height + self.listSpacing)
+        var yPosition = self.pointToParent.y + frame.height + self.listSpacing
 
         if availableHeight < (self.keyboardHeight + self.tableViewHeightX) {
             yPosition = self.pointToParent.y - self.tableViewHeightX

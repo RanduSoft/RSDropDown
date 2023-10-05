@@ -31,6 +31,8 @@ fileprivate final class DropDownExampleVC: UIViewController {
         self.dropDown.padding = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 0)
         
         // setup
+//        self.dropDown.listWidth = 380
+        self.dropDown.listSpacing = 10
         self.dropDown.rowHeight = 45
         self.dropDown.listHeight = self.dropDown.rowHeight * 4 // 4 items visible
         
