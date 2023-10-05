@@ -255,7 +255,7 @@ open class RSDropDown: UITextField {
 
     private func animateTablePresentation() {
         let finalYPosition = self.tableView.frame.origin.y
-        if self.willShowTableViewUp { self.tableView.frame.origin.y = self.frame.origin.y }
+        if self.willShowTableViewUp { self.tableView.frame.origin.y = self.pointToParent.y }
         UIView.animate(withDuration: self.animationDuration, delay: 0, options: .curveEaseInOut) {
             self.tableView.frame.origin.y = finalYPosition
             self.tableView.frame.size.height = self.tableViewHeightX
