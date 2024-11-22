@@ -25,6 +25,7 @@ func setupDropDown() {
     self.dropDown.showTableViewShadow = false
     self.dropDown.cornerRadius = 10
     self.dropDown.padding = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 0)
+    self.isSearchEnabled = false // set to "true" for the textfield to be editable and provide autocomplete suggestions
     
     // setup
     //self.dropDown.listWidth = 380
@@ -32,7 +33,7 @@ func setupDropDown() {
     self.dropDown.rowHeight = 45
     self.dropDown.listHeight = self.dropDown.rowHeight * 4 // 4 items visible
     
-    self.dropDown.placeholder = "Pick one"
+    self.dropDown.placeholder = "Pick one" // optional. if no placeholder, the first item from optionArray will show
     self.dropDown.optionArray = (1...500).compactMap { "Option \($0)" }
     self.dropDown.didSelect { selectedItemText, selectedItemIndex, selectedItemId in
         print(selectedItemText, selectedItemIndex, selectedItemId)
