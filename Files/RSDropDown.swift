@@ -11,7 +11,11 @@ open class RSDropDown: UITextField {
     fileprivate var chevronImageView: UIImageView!
     fileprivate var shadowView: UIView!
     fileprivate var tableViewHeightX: CGFloat = 100
-    fileprivate var dataArray = [String]()
+    fileprivate var dataArray = [String]() {
+        didSet {
+            self.reloadData()
+        }
+    }
     fileprivate var imageArray = [String]()
     fileprivate weak var parentController: UIViewController?
     fileprivate var pointToParent = CGPoint.zero
@@ -24,8 +28,6 @@ open class RSDropDown: UITextField {
             }
             
             self.resizeTable()
-            self.selectedIndex = nil
-            self.reloadData()
         }
     }
     
@@ -73,7 +75,7 @@ open class RSDropDown: UITextField {
     @IBInspectable public var chevronImage: UIImage = UIImage(systemName: "chevron.down")! {
         didSet { self.chevronImageView.image = self.chevronImage }
     }
-    @IBInspectable public var isSearchEnable: Bool = false {
+    @IBInspectable public var isSearchEnabled: Bool = false {
         didSet { self.addGestures() }
     }
     @IBInspectable public var tableViewCellFont: UIFont = .systemFont(ofSize: 17)
@@ -137,15 +139,20 @@ open class RSDropDown: UITextField {
         self.configureBackgroundView()
         self.observeKeyboardNotifications()
         self.addGestures()
+        
+        self.addTarget(self, action: #selector(self.textFieldTextChanged(_:)), for: .editingChanged)
     }
 
     private func configureRightView(with size: CGFloat) {
-        let rightView = UIView(frame: CGRect(x: 0, y: 0, width: size, height: size))
-        self.rightView = rightView
+        self.rightView = UIView(frame: CGRect(x: 0, y: 0, width: size, height: size))
         self.rightViewMode = .always
-        let chevronContainerView = UIView(frame: rightView.frame)
+        
+        let chevronContainerView = UIView(frame: self.rightView!.frame)
         self.rightView?.addSubview(chevronContainerView)
         self.setupChevron(in: chevronContainerView)
+        
+        let touchActionGesture = UITapGestureRecognizer(target: self, action: #selector(self.touchAction))
+        self.rightView?.addGestureRecognizer(touchActionGesture)
     }
 
     private func setupChevron(in containerView: UIView) {
@@ -163,7 +170,7 @@ open class RSDropDown: UITextField {
     }
 
     private func observeKeyboardNotifications() {
-        guard self.isSearchEnable, self.handleKeyboard else { return }
+        guard self.isSearchEnabled, self.handleKeyboard else { return }
         
         NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: nil) { (notification) in
             if self.isFirstResponder {
@@ -183,13 +190,14 @@ open class RSDropDown: UITextField {
 
     private func addGestures() {
         let touchActionGesture = UITapGestureRecognizer(target: self, action: #selector(self.touchAction))
-        if self.isSearchEnable {
-            self.rightView?.addGestureRecognizer(touchActionGesture)
-        } else {
+        
+        if !self.isSearchEnabled {
             self.addGestureRecognizer(touchActionGesture)
+        } else {
+            self.gestureRecognizers?.forEach({ self.removeGestureRecognizer($0) })
         }
-
-        let backgroundViewGesture = UITapGestureRecognizer(target: self, action: #selector(self.touchAction))
+        
+        let backgroundViewGesture = UITapGestureRecognizer(target: self, action: #selector(self.backgroundTouchAction))
         self.backgroundView.addGestureRecognizer(backgroundViewGesture)
     }
     
@@ -211,6 +219,8 @@ open class RSDropDown: UITextField {
         
         self.adjustTablePositionAccordingToKeyboardHeight(in: parentController)
         self.animateTablePresentation()
+        
+        self.resizeTable()
     }
 
     private func configureTableView(in parentController: UIViewController) {
@@ -255,12 +265,18 @@ open class RSDropDown: UITextField {
 
     private func animateTablePresentation() {
         let finalYPosition = self.tableView.frame.origin.y
-        if self.willShowTableViewUp { self.tableView.frame.origin.y = self.pointToParent.y }
+        
+        if self.willShowTableViewUp {
+            self.tableView.frame.origin.y = self.pointToParent.y
+        }
+        
         UIView.animate(withDuration: self.animationDuration, delay: 0, options: .curveEaseInOut) {
             self.tableView.frame.origin.y = finalYPosition
             self.tableView.frame.size.height = self.tableViewHeightX
             self.tableView.alpha = 1
-            if self.showTableViewShadow { self.shadowView.alpha = 1 }
+            if self.showTableViewShadow {
+                self.shadowView.alpha = 1
+            }
             self.shadowView.frame = self.tableView.frame
             self.chevronImageView.transform = CGAffineTransform(rotationAngle: .pi)
         } completion: { [weak self] _ in
@@ -280,7 +296,7 @@ open class RSDropDown: UITextField {
     }
 
     private func scrollToSelectedRowIfNeeded() {
-        if self.scrollToSelectedItem, let selectedIndex = self.selectedIndex {
+        if self.scrollToSelectedItem, let selectedIndex = self.selectedIndex, selectedIndex < self.dataArray.count {
             self.tableView.scrollToRow(at: IndexPath(row: selectedIndex, section: 0), at: .middle, animated: true)
         }
     }
@@ -299,6 +315,16 @@ open class RSDropDown: UITextField {
             self?.backgroundView.removeFromSuperview()
             self?.isSelected = false
             self?.tableViewDidDisappearHandler()
+        }
+    }
+    
+    @objc public func backgroundTouchAction() {
+        if self.isSearchEnabled {
+            if self.isSelected {
+                self.hideList()
+            }
+        } else {
+            self.touchAction()
         }
     }
 
@@ -368,21 +394,21 @@ extension RSDropDown: UITextFieldDelegate {
     }
 
     public func textFieldDidBeginEditing(_ textField: UITextField) {
-        self.text = ""
+        self.selectedIndex = nil
         self.dataArray = self.optionArray
         self.touchAction()
     }
 
     public func textFieldShouldBeginEditing(_ textField: UITextField) -> Bool {
-        return self.isSearchEnable
+        return self.isSearchEnabled
     }
-
-    public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-        self.searchText = string.isEmpty ? String(text!.dropLast()) : text! + string
+    
+    @objc private func textFieldTextChanged(_ textField: UITextField) {
+        self.searchText = textField.text ?? ""
+        
         if !self.isSelected {
             self.showList()
         }
-        return true
     }
 }
 
@@ -421,15 +447,13 @@ extension RSDropDown: UITableViewDataSource, UITableViewDelegate {
     }
 
     public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        self.selectedIndex = indexPath.row
-        let selectedText = self.dataArray[selectedIndex!]
+        let selectedText = self.dataArray[indexPath.row]
         tableView.cellForRow(at: indexPath)?.alpha = 0
 
         UIView.animate(withDuration: 0.3, animations: {
             tableView.cellForRow(at: indexPath)?.alpha = 1
             tableView.cellForRow(at: indexPath)?.backgroundColor = self.selectedRowColor
         }) { [weak self] _ in
-            self?.text = "\(selectedText)"
             self?.reloadData()
         }
 
@@ -439,6 +463,7 @@ extension RSDropDown: UITableViewDataSource, UITableViewDelegate {
         }
 
         if let selectedIndex = self.optionArray.firstIndex(where: { $0 == selectedText }) {
+            self.selectedIndex = selectedIndex
             self.didSelectCompletion(selectedText, selectedIndex, self.optionIds?[selectedIndex] ?? 0)
         }
     }
@@ -461,6 +486,10 @@ fileprivate extension UIView {
 // helpers
 fileprivate extension RSDropDown {
     func reloadData() {
+        guard self.tableView != nil else {
+            return
+        }
+        
         DispatchQueue.main.async {
             self.tableView.reloadData()
         }
