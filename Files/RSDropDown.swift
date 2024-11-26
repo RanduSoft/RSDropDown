@@ -197,8 +197,10 @@ open class RSDropDown: UITextField {
             self.gestureRecognizers?.forEach({ self.removeGestureRecognizer($0) })
         }
         
-        let backgroundViewGesture = UITapGestureRecognizer(target: self, action: #selector(self.backgroundTouchAction))
-        self.backgroundView.addGestureRecognizer(backgroundViewGesture)
+        if self.backgroundView.gestureRecognizers?.count == 0 {
+            let backgroundViewGesture = UITapGestureRecognizer(target: self, action: #selector(self.backgroundTouchAction))
+            self.backgroundView.addGestureRecognizer(backgroundViewGesture)
+        }
     }
     
     public func showList() {
@@ -333,6 +335,8 @@ open class RSDropDown: UITextField {
     }
 
     func resizeTable() {
+        guard self.tableView != nil else { return }
+        
         self.tableViewHeightX = min(self.listHeight, self.rowHeight * CGFloat(self.dataArray.count))
         let availableHeight = (self.parentController?.view.frame.height ?? 0) - (self.pointToParent.y + self.frame.height + self.listSpacing)
         var yPosition = self.pointToParent.y + self.frame.height + self.listSpacing
