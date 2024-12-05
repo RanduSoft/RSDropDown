@@ -10,7 +10,7 @@ open class RSDropDown: UITextField {
     fileprivate var tableView: UITableView!
     fileprivate var chevronImageView: UIImageView!
     fileprivate var shadowView: UIView!
-    fileprivate var tableViewHeightX: CGFloat = 100
+    fileprivate var tableViewHeightY: CGFloat = 100
     fileprivate var dataArray = [String]() {
         didSet {
             self.reloadData()
@@ -78,6 +78,7 @@ open class RSDropDown: UITextField {
     @IBInspectable public var isSearchEnabled: Bool = false {
         didSet { self.addGestures() }
     }
+    @IBInspectable public var clearSearchSelectionOnOpen: Bool = true
     @IBInspectable public var tableViewCellFont: UIFont = .systemFont(ofSize: 17)
     
     private var willShowTableViewUp: Bool = false
@@ -187,26 +188,27 @@ open class RSDropDown: UITextField {
             }
         }
     }
-
+    
     private func addGestures() {
-        let touchActionGesture = UITapGestureRecognizer(target: self, action: #selector(self.touchAction))
+        self.gestureRecognizers?.forEach({ self.removeGestureRecognizer($0) })
+        self.backgroundView.gestureRecognizers?.forEach({ self.removeGestureRecognizer($0) })
         
         if !self.isSearchEnabled {
+            let touchActionGesture = UITapGestureRecognizer(target: self, action: #selector(self.touchAction))
             self.addGestureRecognizer(touchActionGesture)
-        } else {
-            self.gestureRecognizers?.forEach({ self.removeGestureRecognizer($0) })
         }
         
-        if self.backgroundView.gestureRecognizers?.count == 0 {
-            let backgroundViewGesture = UITapGestureRecognizer(target: self, action: #selector(self.backgroundTouchAction))
-            self.backgroundView.addGestureRecognizer(backgroundViewGesture)
-        }
+        let backgroundViewGesture = UITapGestureRecognizer(target: self, action: #selector(self.touchAction))
+        self.backgroundView.addGestureRecognizer(backgroundViewGesture)
     }
     
     public func showList() {
         guard let parentController = self.parentViewController else { return }
-        guard self.dataArray.count > 0 else {
-            print("[RSDropDown] ⚠️ optionArray is empty, the table can't be build") ; return
+        guard !self.dataArray.isEmpty else {
+            if !self.optionArray.isEmpty {
+                self.dataArray = self.optionArray
+                self.showList()
+            } ; return
         }
 
         self.backgroundView.frame = parentController.view.frame
@@ -214,19 +216,24 @@ open class RSDropDown: UITextField {
         parentController.view.insertSubview(self.backgroundView, aboveSubview: self)
 
         self.tableViewWillAppearHandler()
-        self.tableViewHeightX = min(self.listHeight, self.rowHeight * CGFloat(self.dataArray.count))
+        self.tableViewHeightY = min(self.listHeight, self.rowHeight * CGFloat(self.dataArray.count))
         self.configureTableView(in: parentController)
         
         self.isSelected = true
         
+        self.resizeTable()
+        
         self.adjustTablePositionAccordingToKeyboardHeight(in: parentController)
         self.animateTablePresentation()
-        
-        self.resizeTable()
     }
 
     private func configureTableView(in parentController: UIViewController) {
-        self.tableView = UITableView(frame: CGRect(x: self.listWidth == 0 ? self.pointToParent.x : self.pointToParent.x + (self.frame.width / 2) - (self.listWidth / 2), y: self.pointToParent.y + self.frame.height + self.listSpacing, width: self.listWidth == 0 ? self.frame.width : self.listWidth, height: self.frame.height))
+        self.tableView = UITableView(frame: CGRect(
+            x: self.listWidth == 0 ? self.pointToParent.x : self.pointToParent.x + (self.frame.width / 2) - (self.listWidth / 2),
+            y: 0, // setup in "adjustTablePositionAccordingToKeyboardHeight()"
+            width: self.listWidth == 0 ? self.frame.width : self.listWidth,
+            height: self.frame.height
+        ))
         self.tableView.dataSource = self
         self.tableView.delegate = self
         self.tableView.alpha = 0
@@ -255,8 +262,8 @@ open class RSDropDown: UITextField {
         let availableHeight = (parentController.view.frame.height) - (self.pointToParent.y + self.frame.height + self.listSpacing)
         var yPosition = self.pointToParent.y + self.frame.height + self.listSpacing
 
-        if availableHeight < (self.keyboardHeight + self.tableViewHeightX) {
-            yPosition = self.pointToParent.y - self.tableViewHeightX - self.listSpacing
+        if availableHeight < (self.keyboardHeight + self.tableViewHeightY) {
+            yPosition = self.pointToParent.y - self.tableViewHeightY - self.listSpacing
             self.willShowTableViewUp = true
         } else {
             self.willShowTableViewUp = false
@@ -266,25 +273,26 @@ open class RSDropDown: UITextField {
     }
 
     private func animateTablePresentation() {
-        let finalYPosition = self.tableView.frame.origin.y
+        let finalYPosition = self.tableView.frame.origin.y // final Y for tableview after animation (calculated in adjustTablePositionAccordingToKeyboardHeight)
         
         if self.willShowTableViewUp {
-            self.tableView.frame.origin.y = self.pointToParent.y
+            self.tableView.frame.origin.y = self.pointToParent.y - self.tableViewHeightY // initial Y at which tableview appears
         }
         
         UIView.animate(withDuration: self.animationDuration, delay: 0, options: .curveEaseInOut) {
             self.tableView.frame.origin.y = finalYPosition
-            self.tableView.frame.size.height = self.tableViewHeightX
+            self.tableView.frame.size.height = self.tableViewHeightY
             self.tableView.alpha = 1
             if self.showTableViewShadow {
                 self.shadowView.alpha = 1
             }
             self.shadowView.frame = self.tableView.frame
             self.chevronImageView.transform = CGAffineTransform(rotationAngle: .pi)
+            
+            self.scrollToSelectedRowIfNeeded()
         } completion: { [weak self] _ in
             self?.layoutIfNeeded()
             self?.flashScrollIndicatorsIfNeeded()
-            self?.scrollToSelectedRowIfNeeded()
             self?.tableViewDidAppearHandler()
         }
     }
@@ -299,7 +307,7 @@ open class RSDropDown: UITextField {
 
     private func scrollToSelectedRowIfNeeded() {
         if self.scrollToSelectedItem, let selectedIndex = self.selectedIndex, selectedIndex < self.dataArray.count {
-            self.tableView.scrollToRow(at: IndexPath(row: selectedIndex, section: 0), at: .middle, animated: true)
+            self.tableView.scrollToRow(at: IndexPath(row: selectedIndex, section: 0), at: .middle, animated: false)
         }
     }
 
@@ -337,20 +345,20 @@ open class RSDropDown: UITextField {
     func resizeTable() {
         guard self.tableView != nil else { return }
         
-        self.tableViewHeightX = min(self.listHeight, self.rowHeight * CGFloat(self.dataArray.count))
+        self.tableViewHeightY = min(self.listHeight, self.rowHeight * CGFloat(self.dataArray.count))
         let availableHeight = (self.parentController?.view.frame.height ?? 0) - (self.pointToParent.y + self.frame.height + self.listSpacing)
         var yPosition = self.pointToParent.y + self.frame.height + self.listSpacing
 
-        if availableHeight < (self.keyboardHeight + self.tableViewHeightX) {
-            yPosition = self.pointToParent.y - self.tableViewHeightX
+        if availableHeight < (self.keyboardHeight + self.tableViewHeightY) {
+            yPosition = self.pointToParent.y - self.tableViewHeightY
         }
 
-        UIView.animate(withDuration: self.animationDuration, delay: 0, usingSpringWithDamping: 0.9, initialSpringVelocity: 0.1, options: .curveEaseInOut) {
-            self.tableView.frame = CGRect(x: self.pointToParent.x, y: yPosition, width: self.frame.width, height: self.tableViewHeightX)
+//        UIView.animate(withDuration: self.animationDuration, delay: 0, usingSpringWithDamping: 0.9, initialSpringVelocity: 0.1, options: .curveEaseInOut) {
+            self.tableView.frame = CGRect(x: self.pointToParent.x, y: yPosition, width: self.frame.width, height: self.tableViewHeightY)
             self.shadowView.frame = self.tableView.frame
-        } completion: { [weak self] _ in
-            self?.layoutIfNeeded()
-        }
+//        } completion: { [weak self] _ in
+//            self?.layoutIfNeeded()
+//        }
     }
 
 	public func didSelect(completion: @escaping (_ selectedText: String, _ index: Int , _ id:Int ) -> ()) {
@@ -398,7 +406,9 @@ extension RSDropDown: UITextFieldDelegate {
     }
 
     public func textFieldDidBeginEditing(_ textField: UITextField) {
-        self.selectedIndex = nil
+        if self.clearSearchSelectionOnOpen {
+            self.selectedIndex = nil
+        }
         self.dataArray = self.optionArray
         self.touchAction()
     }
@@ -436,15 +446,24 @@ extension RSDropDown: UITableViewDataSource, UITableViewDelegate {
             cell.imageView?.clipsToBounds = true
             cell.imageView?.layer.cornerRadius = self.imageCellIsRounded ? (self.rowHeight * imageViewScale) / 2 : 0
         }
+        
+        let cellText = self.dataArray[indexPath.row]
 
-        cell.textLabel?.text = "\(self.dataArray[indexPath.row])"
+        cell.textLabel?.text = cellText
         cell.textLabel?.textColor = self.rowTextColor
         cell.textLabel?.font = self.tableViewCellFont
         cell.textLabel?.textAlignment = self.textAlignment
         cell.textLabel?.numberOfLines = 0
         cell.textLabel?.lineBreakMode = .byWordWrapping
         
-        cell.accessoryType = (indexPath.row == self.selectedIndex) && self.checkMarkEnabled ? .checkmark : .none
+        let isMatchingRow: Bool
+        if self.isSearchEnabled {
+            isMatchingRow = cellText.lowercased() == self.text?.lowercased()
+        } else {
+            isMatchingRow = indexPath.row == self.selectedIndex
+        }
+        
+        cell.accessoryType = isMatchingRow && self.checkMarkEnabled ? .checkmark : .none
         cell.tintColor = self.rowTextColor
 
         return cell

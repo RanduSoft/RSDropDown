@@ -25,7 +25,8 @@ func setupDropDown() {
     self.dropDown.showTableViewShadow = false
     self.dropDown.cornerRadius = 10
     self.dropDown.padding = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 0)
-    self.isSearchEnabled = false // set to "true" for the textfield to be editable and provide autocomplete suggestions
+    self.dropDown.isSearchEnabled = false // set to `true` for the textfield to be editable and provide autocomplete suggestions
+    self.dropDown.clearSearchSelectionOnOpen = false // valid only when `isSearchEnabled` is `true`
     
     // setup
     //self.dropDown.listWidth = 380

@@ -14,6 +14,9 @@ fileprivate final class DropDownExampleVC: UIViewController {
     func viewDidLoad() {
         super.viewDidLoad()
         
+        // if you don't use storyboards..
+//        self.dropDown = RSDropDown(frame: CGRect(origin: CGPoint(x: 20, y: 40), size: CGSize(width: 100, height: 150)))
+        
         // customization
         self.dropDown.borderStyle = .none
         self.dropDown.backgroundColor = .systemBackground
@@ -29,6 +32,8 @@ fileprivate final class DropDownExampleVC: UIViewController {
         self.dropDown.showTableBorder = true
         self.dropDown.cornerRadius = 10
         self.dropDown.padding = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 0)
+        self.dropDown.isSearchEnabled = false
+        self.dropDown.clearSearchSelectionOnOpen = false
         
         // setup
 //        self.dropDown.listWidth = 380
