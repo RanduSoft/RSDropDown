@@ -22,21 +22,13 @@ struct RSDropDownAnimator {
         showShadow: Bool,
         willShowUp: Bool,
         dropDownOriginY: CGFloat,
-        completion: @escaping @Sendable () -> Void
+        completion: @escaping @MainActor () -> Void
     ) {
         let isReduceMotion = UIAccessibility.isReduceMotionEnabled
 
-        // Set the starting frame: collapsed height at the dropdown edge
         tableView.frame.size.height = 0
         tableView.alpha = 0
-
-        if willShowUp {
-            // Start collapsed at the bottom of where the list will appear
-            tableView.frame.origin.y = dropDownOriginY
-        } else {
-            // Start collapsed at the top (just below the dropdown)
-            tableView.frame.origin.y = targetY
-        }
+        tableView.frame.origin.y = willShowUp ? dropDownOriginY : targetY
 
         shadowView.frame = tableView.frame
         shadowView.alpha = 0
@@ -52,7 +44,7 @@ struct RSDropDownAnimator {
                     showShadow: showShadow
                 )
             } completion: { _ in
-                completion()
+                MainActor.assumeIsolated { completion() }
             }
         } else {
             UIView.animate(withDuration: duration, delay: 0, options: .curveEaseInOut) {
@@ -65,7 +57,7 @@ struct RSDropDownAnimator {
                     showShadow: showShadow
                 )
             } completion: { _ in
-                completion()
+                MainActor.assumeIsolated { completion() }
             }
         }
     }
@@ -99,7 +91,7 @@ struct RSDropDownAnimator {
         collapseToY: CGFloat,
         collapseWidth: CGFloat,
         collapseX: CGFloat,
-        completion: @escaping @Sendable () -> Void
+        completion: @escaping @MainActor () -> Void
     ) {
         let isReduceMotion = UIAccessibility.isReduceMotionEnabled
 
@@ -114,7 +106,7 @@ struct RSDropDownAnimator {
                     collapseX: collapseX
                 )
             } completion: { _ in
-                completion()
+                MainActor.assumeIsolated { completion() }
             }
         } else {
             UIView.animate(withDuration: duration, delay: 0, usingSpringWithDamping: 0.9, initialSpringVelocity: 0.1, options: .curveEaseInOut) {
@@ -127,7 +119,7 @@ struct RSDropDownAnimator {
                     collapseX: collapseX
                 )
             } completion: { _ in
-                completion()
+                MainActor.assumeIsolated { completion() }
             }
         }
     }

@@ -76,7 +76,6 @@ final class RSDropDownTableManager: NSObject, UITableViewDataSource, UITableView
         if isSearchEnabled {
             isMatchingRow = item.dropDownTitle.lowercased() == currentSearchText.lowercased()
         } else {
-            // Map filtered index to original index for selection check
             let originalIndex = allItems.firstIndex(where: { $0.dropDownID == item.dropDownID })
             isMatchingRow = originalIndex == selectedIndex
         }
@@ -92,7 +91,6 @@ final class RSDropDownTableManager: NSObject, UITableViewDataSource, UITableView
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let item = filteredItems[indexPath.row]
 
-        // Flash the cell
         if let cell = tableView.cellForRow(at: indexPath) {
             cell.alpha = 0
             UIView.animate(withDuration: 0.2) {
@@ -101,7 +99,6 @@ final class RSDropDownTableManager: NSObject, UITableViewDataSource, UITableView
             }
         }
 
-        // Find the original index in the unfiltered array
         if let originalIndex = allItems.firstIndex(where: { $0.dropDownID == item.dropDownID }) {
             onItemSelected?(item, originalIndex)
         }

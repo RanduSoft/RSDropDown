@@ -143,9 +143,6 @@ private struct _RSDropDownRepresentable<Item: DropDownItem & Equatable>: UIViewR
     }
 
     func updateUIView(_ uiView: RSDropDown, context: Context) {
-        // Don't interfere while the dropdown is open or animating closed —
-        // setItems/configuration changes trigger resizeTable and reloadData
-        // which fight the ongoing hide animation and cause flicker.
         guard !uiView.isDropDownOpen else { return }
 
         uiView.setItems(items)

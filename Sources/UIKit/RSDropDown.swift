@@ -91,17 +91,16 @@ open class RSDropDown: UITextField {
     public private(set) var isDropDownOpen: Bool = false
     private var willShowTableViewUp: Bool = false
 
-    private var keyboardWillShowToken: Any?
-    private var keyboardWillHideToken: Any?
+    /// Safety: only mutated from @MainActor methods; read in deinit when no concurrent access exists.
+    nonisolated(unsafe) private var keyboardWillShowToken: Any?
+    nonisolated(unsafe) private var keyboardWillHideToken: Any?
 
-    /// When true, the text field glass is handled externally (e.g., SwiftUI `.glassEffect()`).
-    /// The dropdown list still applies its own UIKit glass treatment independently.
+    /// When `true`, the text field glass is handled externally (e.g. SwiftUI `.glassEffect()`).
+    /// The dropdown list still applies its own UIKit glass independently.
     public var externalGlassEffect: Bool = false
 
-    /// Glass effect background inserted behind the text field content (iOS 26+ or blur fallback).
     private var glassBackgroundView: UIView?
 
-    // Legacy callback storage (used by deprecated API shims)
     var legacyDidSelectCompletion: ((String, Int, Int) -> Void)?
     var legacyTableViewWillAppearHandler: (() -> Void)?
     var legacyTableViewDidAppearHandler: (() -> Void)?
@@ -123,31 +122,26 @@ open class RSDropDown: UITextField {
     }
 
     deinit {
-        removeKeyboardObservers()
+        if let token = keyboardWillShowToken {
+            NotificationCenter.default.removeObserver(token)
+        }
+        if let token = keyboardWillHideToken {
+            NotificationCenter.default.removeObserver(token)
+        }
     }
 
     override open func didMoveToWindow() {
         super.didMoveToWindow()
-        // Re-resolve border color now that we have the correct trait collection
         if window != nil {
-            refreshBorderColor()
-        }
-    }
-
-    override open func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        super.traitCollectionDidChange(previousTraitCollection)
-        if traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) {
             refreshBorderColor()
         }
     }
 
     private func refreshBorderColor() {
         if externalGlassEffect && configuration.style.usesGlassEffect {
-            // Glass is handled externally (SwiftUI), no border to refresh
             return
         }
         if configuration.style.usesGlassEffect {
-            // UIKit glass mode: subtle separator border for definition
             layer.borderColor = UIColor.separator.resolvedColor(with: traitCollection).cgColor
         } else if configuration.style.showBorder {
             layer.borderColor = configuration.style.borderColor.resolvedColor(with: traitCollection).cgColor
@@ -184,7 +178,6 @@ open class RSDropDown: UITextField {
         pointToParent = getConvertedPoint(for: self, relativeTo: parentController.view)
         parentController.view.insertSubview(backgroundView, aboveSubview: self)
 
-        // Cut a hole in the scrim where the dropdown is so it stays fully visible
         if !configuration.style.usesGlassEffect {
             applyScrimMask()
         }
@@ -202,9 +195,8 @@ open class RSDropDown: UITextField {
 
         adjustTablePositionAccordingToKeyboardHeight(in: parentController)
 
-        // Temporarily set the table to its full height so scrollToRow can
-        // calculate the correct .middle offset, then the animator will
-        // collapse it back to 0 and animate the expansion.
+        // Pre-layout at full height so scrollToRow can calculate the correct offset
+        // before the animator collapses and re-expands the table.
         if let tableView {
             tableView.frame.size.height = tableViewHeightY
             tableView.layoutIfNeeded()
@@ -340,18 +332,17 @@ open class RSDropDown: UITextField {
 
         addTarget(self, action: #selector(textFieldTextChanged(_:)), for: .editingChanged)
 
-        // Base layer setup
         layer.cornerCurve = .continuous
         clipsToBounds = true
-
-        // Apply visual appearance based on the default configuration (glass or classic)
         applyGlassEffectIfNeeded()
 
-        // Accessibility
+        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: RSDropDown, _: UITraitCollection) in
+            self.refreshBorderColor()
+        }
+
         accessibilityTraits = .button
         accessibilityHint = NSLocalizedString("Double tap to show options", comment: "Dropdown hint")
 
-        // Table manager callback
         tableManager.onItemSelected = { [weak self] item, originalIndex in
             self?.handleSelection(item: item, index: originalIndex)
         }
@@ -363,7 +354,6 @@ open class RSDropDown: UITextField {
     }
 
     private func applyConfiguration() {
-        // Glass / standard appearance
         applyGlassEffectIfNeeded()
 
         animator.duration = configuration.animation.duration
@@ -371,12 +361,10 @@ open class RSDropDown: UITextField {
         tableManager.showCheckmark = configuration.behavior.showCheckmark
         tableManager.isSearchEnabled = configuration.search.isEnabled
 
-        // Update chevron appearance
         chevronImageView?.tintColor = configuration.chevron.color
         chevronImageView?.image = configuration.chevron.image
         updateChevronSize()
 
-        // Update keyboard observers for search mode changes
         updateKeyboardObservers()
         addGestures()
     }
@@ -439,12 +427,13 @@ open class RSDropDown: UITextField {
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            guard let self, self.isFirstResponder else { return }
-            if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue {
-                self.keyboardHeight = keyboardFrame.cgRectValue.height
-            }
-            if !self.isDropDownOpen {
-                self.showList()
+            let kbHeight = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue.height ?? 0
+            MainActor.assumeIsolated {
+                guard let self, self.isFirstResponder else { return }
+                self.keyboardHeight = kbHeight
+                if !self.isDropDownOpen {
+                    self.showList()
+                }
             }
         }
 
@@ -453,8 +442,10 @@ open class RSDropDown: UITextField {
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            guard let self, self.isFirstResponder else { return }
-            self.keyboardHeight = 0
+            MainActor.assumeIsolated {
+                guard let self, self.isFirstResponder else { return }
+                self.keyboardHeight = 0
+            }
         }
     }
 
@@ -521,12 +512,10 @@ open class RSDropDown: UITextField {
 
         if configuration.style.usesGlassEffect {
             tv.backgroundView = makeGlassTableBackground()
-            // Subtle border for definition
             tv.layer.borderColor = UIColor.separator.resolvedColor(with: traitCollection).cgColor
             tv.layer.borderWidth = 1.0 / UIScreen.main.scale
         } else if configuration.style.showBorder {
-            // Resolve with the dropdown's trait collection so dark/light mode is correct
-            // (the table view hasn't joined the hierarchy yet and would resolve in light mode)
+            // Resolve against the dropdown's traitCollection (the table hasn't joined the hierarchy yet).
             tv.layer.borderColor = configuration.style.borderColor.resolvedColor(with: traitCollection).cgColor
             tv.layer.borderWidth = configuration.style.borderWidth > 0 ? configuration.style.borderWidth : 1
         }
@@ -617,16 +606,12 @@ open class RSDropDown: UITextField {
     // MARK: - Liquid Glass
 
     private func applyGlassEffectIfNeeded() {
-        // Remove any existing glass background
         glassBackgroundView?.removeFromSuperview()
         glassBackgroundView = nil
 
-        // Always keep corner radius in sync
         layer.cornerRadius = configuration.style.cornerRadius
         layer.cornerCurve = .continuous
 
-        // When glass is handled externally (SwiftUI .glassEffect()), just be transparent.
-        // The dropdown list still applies its own UIKit glass treatment independently.
         if externalGlassEffect && configuration.style.usesGlassEffect {
             backgroundColor = .clear
             layer.borderWidth = 0
@@ -635,7 +620,6 @@ open class RSDropDown: UITextField {
         }
 
         guard configuration.style.usesGlassEffect else {
-            // Restore standard opaque appearance
             backgroundColor = configuration.style.rowBackgroundColor
             layer.borderColor = configuration.style.borderColor.resolvedColor(with: traitCollection).cgColor
             layer.borderWidth = configuration.style.showBorder
@@ -645,7 +629,6 @@ open class RSDropDown: UITextField {
             return
         }
 
-        // UIKit-only glass mode (standalone, no SwiftUI wrapper)
         let effectView: UIVisualEffectView
         if #available(iOS 26, *) {
             effectView = UIVisualEffectView(effect: UIGlassEffect())
@@ -662,8 +645,6 @@ open class RSDropDown: UITextField {
         insertSubview(effectView, at: 0)
 
         backgroundColor = .clear
-
-        // Subtle border for definition against the background
         layer.borderWidth = 1.0 / UIScreen.main.scale
         layer.borderColor = UIColor.separator.resolvedColor(with: traitCollection).cgColor
         clipsToBounds = true
@@ -685,7 +666,6 @@ open class RSDropDown: UITextField {
 
     private func flashScrollIndicatorsIfNeeded() {
         guard let tableView else { return }
-        // Delay slightly so the table is fully visible before flashing
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             tableView.flashScrollIndicators()
         }
@@ -747,16 +727,13 @@ open class RSDropDown: UITextField {
     private func handleSelection(item: any DropDownItem, index: Int) {
         selectedIndex = index
 
-        // Haptic feedback
         if configuration.behavior.hapticFeedback {
             selectionFeedback.selectionChanged()
         }
 
-        // Fire callbacks
         let selection = DropDownSelection(item: item, index: index)
         onSelection?(selection)
 
-        // Legacy callback support
         let legacyId = (item.dropDownID as? Int) ?? 0
         legacyDidSelectCompletion?(item.dropDownTitle, index, legacyId)
 

@@ -1,13 +1,19 @@
 # RSDropDown
 
-A fully customizable dropdown component for iOS with Apple-native defaults.
+A dropdown component for iOS with two built-in styles: **Liquid Glass** (default, iOS 26+) and **Classic Apple**.
 
-Supports UIKit, SwiftUI, search/autocomplete, Dynamic Type, accessibility, and Storyboards.
+Supports UIKit, SwiftUI, search/autocomplete, custom item types, Dynamic Type, accessibility, and Storyboards.
+
+![UIKit1](https://i.imgur.com/1gl0Nq0.png)
+![UIKit2](https://i.imgur.com/hs0Z9ho.png)
+![SwiftUI1](https://i.imgur.com/eNhUL5H.png)
+![SwiftUI2](https://i.imgur.com/XmPAkpy.png)
 
 ## Requirements
 
 - iOS 17+
-- Swift 5.10+
+- Swift 6.1+
+- Xcode 26+
 
 ## Installation
 
@@ -17,13 +23,13 @@ Add the following to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/nicklashansen/RSDropDown.git", from: "3.0.0")
+    .package(url: "https://github.com/RanduSoft/RSDropDown.git", from: "3.0.0")
 ]
 ```
 
 Or in Xcode: **File > Add Package Dependencies** and enter the repository URL.
 
-## Usage (v3 API)
+## Quick Start
 
 ### UIKit
 
@@ -31,37 +37,14 @@ Or in Xcode: **File > Add Package Dependencies** and enter the repository URL.
 import RSDropDown
 
 let dropDown = RSDropDown(frame: CGRect(x: 20, y: 100, width: 300, height: 44))
-view.addSubview(dropDown)
-
-// Configuration
-dropDown.configuration.style.rowHeight = 45
-dropDown.configuration.style.rowBackgroundColor = .systemBackground
-dropDown.configuration.style.cornerRadius = 10
-dropDown.configuration.chevron.size = 20
-dropDown.configuration.chevron.color = .systemRed
-dropDown.configuration.list.spacing = 10
-dropDown.configuration.list.maxHeight = 180
-
-// Data
 dropDown.placeholder = "Pick one"
 dropDown.optionArray = ["Option 1", "Option 2", "Option 3"]
 
-// Selection
 dropDown.onSelection = { selection in
     print(selection.item.dropDownTitle, selection.index)
 }
 
-dropDown.selectedIndex = 0
-```
-
-### Chainable API
-
-```swift
-let dropDown = RSDropDown(frame: rect)
-    .rowHeight(45)
-    .rowBackgroundColor(.systemBackground)
-    .listMaxHeight(180)
-    .searchEnabled(true)
+view.addSubview(dropDown)
 ```
 
 ### SwiftUI
@@ -83,7 +66,153 @@ struct ContentView: View {
 }
 ```
 
-### Custom Item Types
+## Style Presets
+
+RSDropDown ships with two presets. The default is **Liquid Glass**.
+
+### Liquid Glass (Default)
+
+Uses the native SwiftUI `.glassEffect()` modifier on iOS 26+ for full Liquid Glass rendering (reflections, refractions, lighting). In UIKit, it uses `UIGlassEffect` with `UIVisualEffectView`. Falls back to a translucent blur material on earlier iOS versions.
+
+```swift
+// UIKit — this is the default, no configuration needed
+let dropDown = RSDropDown(frame: rect)
+
+// SwiftUI — also the default
+RSDropDownPicker(items: cities, selection: $selection, placeholder: "Pick a city")
+    .frame(height: 44)
+```
+
+### Classic Apple
+
+Opaque backgrounds, borders, shadows, and separators. Matches the traditional `UITableView` / `UITextField` appearance.
+
+```swift
+// UIKit
+let dropDown = RSDropDown(frame: rect)
+dropDown.configuration = .classic()
+
+// SwiftUI
+RSDropDownPicker(items: cities, selection: $selection, placeholder: "Pick a city")
+    .classicStyle()
+    .frame(height: 44)
+```
+
+### Switching Styles
+
+You can switch between presets at any time:
+
+```swift
+// UIKit
+dropDown.configuration = .liquidGlass()  // back to default
+dropDown.configuration = .classic()
+
+// SwiftUI
+RSDropDownPicker(...)
+    .glassStyle()    // back to default
+    .classicStyle()
+```
+
+## Configuration
+
+All configuration is grouped under `dropDown.configuration`:
+
+```swift
+dropDown.configuration.style.rowHeight = 56
+dropDown.configuration.style.cornerRadius = 12
+dropDown.configuration.list.maxHeight = 300
+dropDown.configuration.chevron.size = 16
+dropDown.configuration.behavior.hideOnSelect = false
+dropDown.configuration.search.isEnabled = true
+dropDown.configuration.animation.duration = 0.3
+```
+
+### Chainable API
+
+```swift
+let dropDown = RSDropDown(frame: rect)
+    .rowHeight(56)
+    .rowBackgroundColor(.systemBackground)
+    .listMaxHeight(300)
+    .searchEnabled(true)
+```
+
+### Configuration Reference
+
+#### Style
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `rowHeight` | `CGFloat` | `44` | Row height (Apple standard) |
+| `rowBackgroundColor` | `UIColor` | `.systemBackground` @ 45% | Row background color |
+| `rowTextColor` | `UIColor` | `.label` | Text color |
+| `selectedRowColor` | `UIColor` | `.systemFill` | Selected row highlight |
+| `cellFont` | `UIFont` | `.body` (Dynamic Type) | Cell font |
+| `cornerRadius` | `CGFloat` | `16` | Corner radius for dropdown and list |
+| `usesGlassEffect` | `Bool` | `true` | Use Liquid Glass material |
+| `showBorder` | `Bool` | `false` | Show border around the list |
+| `showShadow` | `Bool` | `false` | Show shadow on the list |
+| `showSeparators` | `Bool` | `false` | Show separators between rows |
+| `borderColor` | `UIColor` | `.separator` | Border color |
+| `borderWidth` | `CGFloat` | `0` | Border width (0 = hairline default) |
+| `imageCellIsRounded` | `Bool` | `false` | Round cell images |
+
+#### List
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `maxHeight` | `CGFloat` | `220` | Maximum list height (5 rows at 44pt) |
+| `width` | `CGFloat?` | `nil` | Custom width (`nil` = match dropdown) |
+| `spacing` | `CGFloat` | `4` | Spacing between dropdown and list |
+
+#### Chevron
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `size` | `CGFloat` | `12` | Chevron image size |
+| `color` | `UIColor` | `.secondaryLabel` | Chevron tint color |
+| `image` | `UIImage` | `chevron.down` | Chevron SF Symbol |
+
+#### Behavior
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `hideOnSelect` | `Bool` | `true` | Hide list after selection |
+| `showCheckmark` | `Bool` | `true` | Show checkmark on selected row |
+| `handleKeyboard` | `Bool` | `true` | Handle keyboard in search mode |
+| `flashScrollIndicator` | `Bool` | `true` | Flash scroll indicators on open |
+| `scrollToSelection` | `Bool` | `true` | Scroll to selected item on open |
+| `hapticFeedback` | `Bool` | `true` | Haptic feedback on selection |
+
+#### Search
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `isEnabled` | `Bool` | `false` | Enable search/autocomplete mode |
+| `clearSelectionOnOpen` | `Bool` | `true` | Clear selection when search opens |
+
+#### Animation
+
+| Property | Type | Default | Description |
+|---|---|---|---|
+| `duration` | `TimeInterval` | `0.25` | Animation duration |
+
+## Search / Autocomplete
+
+When search is enabled, the dropdown becomes an editable text field that filters options as the user types.
+
+```swift
+// UIKit
+dropDown.configuration.search.isEnabled = true
+dropDown.configuration.search.clearSelectionOnOpen = true
+
+// SwiftUI
+RSDropDownPicker(items: countries, selection: $selection, placeholder: "Type to search...")
+    .searchEnabled(true)
+    .frame(height: 44)
+```
+
+## Custom Item Types
 
 Conform to `DropDownItem` to use custom models:
 
@@ -103,67 +232,62 @@ let countries = [
     Country(name: "Brazil", flag: "🇧🇷")
 ]
 
+// UIKit
 dropDown.setItems(countries)
+
+// SwiftUI
+RSDropDownPicker(items: countries, selection: $selection, placeholder: "Pick a country")
+    .frame(height: 44)
 ```
 
-### Search / Autocomplete
-
-```swift
-dropDown.configuration.search.isEnabled = true
-dropDown.configuration.search.clearSelectionOnOpen = true
-```
-
-## Configuration Reference
-
-All configuration is grouped under `dropDown.configuration`:
-
-| Group | Property | Default | Description |
-|---|---|---|---|
-| `style` | `rowHeight` | 44 | Row height (Apple standard) |
-| `style` | `rowBackgroundColor` | `.secondarySystemGroupedBackground` | Row background |
-| `style` | `rowTextColor` | `.label` | Text color |
-| `style` | `selectedRowColor` | `.systemFill` | Selected row highlight |
-| `style` | `cellFont` | `.preferredFont(forTextStyle: .body)` | Cell font (Dynamic Type) |
-| `style` | `showBorder` | `false` | Show list border |
-| `style` | `showShadow` | `true` | Show list shadow |
-| `style` | `borderColor` | `.separator` | Border color |
-| `style` | `borderWidth` | 0 | Border width |
-| `style` | `cornerRadius` | 10 | List corner radius |
-| `style` | `imageCellIsRounded` | `false` | Round cell images |
-| `list` | `maxHeight` | 220 | Maximum list height |
-| `list` | `width` | `nil` (match dropdown) | Custom list width |
-| `list` | `spacing` | 4 | Spacing between dropdown and list |
-| `chevron` | `size` | 12 | Chevron image size |
-| `chevron` | `color` | `.secondaryLabel` | Chevron tint color |
-| `chevron` | `image` | `chevron.down` | Chevron SF Symbol |
-| `behavior` | `hideOnSelect` | `true` | Hide list on selection |
-| `behavior` | `showCheckmark` | `true` | Show checkmark on selected row |
-| `behavior` | `handleKeyboard` | `true` | Handle keyboard in search mode |
-| `behavior` | `flashScrollIndicator` | `true` | Flash scroll indicators on open |
-| `behavior` | `scrollToSelection` | `true` | Scroll to selected item on open |
-| `behavior` | `hapticFeedback` | `true` | Haptic feedback on selection |
-| `search` | `isEnabled` | `false` | Enable search/autocomplete |
-| `search` | `clearSelectionOnOpen` | `true` | Clear selection when search opens |
-| `animation` | `duration` | 0.25 | Animation duration |
+`String` conforms to `DropDownItem` by default, so `[String]` arrays work everywhere.
 
 ## Callbacks
 
 ```swift
-// v3 API
 dropDown.onSelection = { selection in
     print(selection.item.dropDownTitle, selection.index)
 }
+
 dropDown.onDropDownWillAppear = { print("Will appear") }
 dropDown.onDropDownDidAppear = { print("Did appear") }
 dropDown.onDropDownWillDisappear = { print("Will disappear") }
 dropDown.onDropDownDidDisappear = { print("Did disappear") }
 ```
 
+## Programmatic Control
+
+```swift
+dropDown.showList()   // Open
+dropDown.hideList()   // Close
+dropDown.touchAction() // Toggle
+
+dropDown.selectedIndex = 2
+print(dropDown.selectedItemTitle)
+print(dropDown.isDropDownOpen)
+```
+
+## SwiftUI Modifiers
+
+`RSDropDownPicker` provides convenience modifiers that return a new picker with the updated configuration:
+
+```swift
+RSDropDownPicker(items: items, selection: $selection, placeholder: "Pick one")
+    .classicStyle()                          // Apply classic preset
+    .searchEnabled(true)                     // Enable search
+    .dropDownConfiguration(customConfig)     // Apply a full custom config
+    .frame(height: 44)
+```
+
+## Demo
+
+An interactive demo is included in [`Sources/Demo/DemoView.swift`](Sources/Demo/DemoView.swift). It showcases both UIKit and SwiftUI usage with Liquid Glass, Classic, and custom configurations. Open the file in Xcode and use the Canvas preview (⌥⌘↩) to see it in action.
+
 ## Migration from v2
 
-All v2 properties and methods are preserved with `@available(*, deprecated)` annotations. Your existing code will compile with deprecation warnings only.
+All v2 properties and methods are preserved with `@available(*, deprecated)` annotations. Existing code compiles with deprecation warnings only — no errors.
 
-| v2 | v3 |
+| v2 Property / Method | v3 Equivalent |
 |---|---|
 | `rowHeight` | `configuration.style.rowHeight` |
 | `rowBackgroundColor` | `configuration.style.rowBackgroundColor` |
@@ -197,3 +321,7 @@ All v2 properties and methods are preserved with `@available(*, deprecated)` ann
 | `listDidDisappear(completion:)` | `onDropDownDidDisappear` |
 | `optionImageArray` | Use `DropDownItem.dropDownImage` |
 | `optionIds` | Use `DropDownItem.dropDownID` |
+
+## License
+
+RSDropDown is available under the MIT license.

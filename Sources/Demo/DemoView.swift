@@ -1,9 +1,8 @@
 //
-//  RSDropDownDemoView.swift
+//  DemoView.swift
 //  RSDropDown
 //
-//  Interactive demo showcasing different RSDropDown configurations.
-//  Open this file in Xcode and use the Canvas (⌥⌘↩) to see previews.
+//  Created by Radu Ursache (RanduSoft)
 //
 
 import SwiftUI
@@ -136,7 +135,6 @@ final class RSDropDownDemoViewController: UIViewController {
             dd.configuration.list.maxHeight = 44 * 6
         }
 
-        // Bottom spacing
         let spacer = UIView()
         spacer.translatesAutoresizingMaskIntoConstraints = false
         spacer.heightAnchor.constraint(equalToConstant: 200).isActive = true

@@ -4,11 +4,11 @@
 //
 //  Created by Radu Ursache (RanduSoft)
 //
-//  Backward-compatible shims for the v2 API.
-//  Every v2 public property and method is preserved here with deprecation annotations.
-//
 
 import UIKit
+
+/// Backward-compatible shims for the v2 API.
+/// Every v2 public property and method is preserved here with deprecation annotations.
 
 extension RSDropDown {
 
