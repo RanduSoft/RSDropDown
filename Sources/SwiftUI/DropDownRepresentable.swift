@@ -86,9 +86,17 @@ public struct RSDropDownPicker<Item: DropDownItem & Equatable>: UIViewRepresenta
     }
 
     /// Applies the Liquid Glass style (iOS 26+ glass material, translucent blur fallback on earlier).
+    /// This is the default style, so calling this is only needed to reset after other modifications.
     public func glassStyle() -> RSDropDownPicker {
         var copy = self
         copy.configuration = .liquidGlass()
+        return copy
+    }
+
+    /// Applies the Classic Apple style (opaque backgrounds, borders, shadows, separators).
+    public func classicStyle() -> RSDropDownPicker {
+        var copy = self
+        copy.configuration = .classic()
         return copy
     }
 }

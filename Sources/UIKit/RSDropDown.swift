@@ -122,6 +122,26 @@ open class RSDropDown: UITextField {
         removeKeyboardObservers()
     }
 
+    override open func didMoveToWindow() {
+        super.didMoveToWindow()
+        // Re-resolve border color now that we have the correct trait collection
+        if window != nil {
+            refreshBorderColor()
+        }
+    }
+
+    override open func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        if traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) {
+            refreshBorderColor()
+        }
+    }
+
+    private func refreshBorderColor() {
+        guard !configuration.style.usesGlassEffect, configuration.style.showBorder else { return }
+        layer.borderColor = configuration.style.borderColor.resolvedColor(with: traitCollection).cgColor
+    }
+
     // MARK: - Public Methods
 
     /// Sets dropdown items from any `DropDownItem` conforming type.
@@ -308,13 +328,12 @@ open class RSDropDown: UITextField {
 
         addTarget(self, action: #selector(textFieldTextChanged(_:)), for: .editingChanged)
 
-        // Default text field appearance: rounded border like a standard UITextField
+        // Base layer setup
         layer.cornerCurve = .continuous
-        layer.cornerRadius = configuration.style.cornerRadius
-        layer.borderColor = configuration.style.borderColor.cgColor
-        layer.borderWidth = 1
-        backgroundColor = configuration.style.rowBackgroundColor
         clipsToBounds = true
+
+        // Apply visual appearance based on the default configuration (glass or classic)
+        applyGlassEffectIfNeeded()
 
         // Accessibility
         accessibilityTraits = .button
@@ -490,9 +509,11 @@ open class RSDropDown: UITextField {
 
         if configuration.style.usesGlassEffect {
             tv.backgroundView = makeGlassTableBackground()
-            tv.backgroundColor = .clear
+            // Keep table backgroundColor matching cell background so bounce edges look uniform
         } else if configuration.style.showBorder {
-            tv.layer.borderColor = configuration.style.borderColor.cgColor
+            // Resolve with the dropdown's trait collection so dark/light mode is correct
+            // (the table view hasn't joined the hierarchy yet and would resolve in light mode)
+            tv.layer.borderColor = configuration.style.borderColor.resolvedColor(with: traitCollection).cgColor
             tv.layer.borderWidth = configuration.style.borderWidth > 0 ? configuration.style.borderWidth : 1
         }
 
@@ -593,7 +614,7 @@ open class RSDropDown: UITextField {
         guard configuration.style.usesGlassEffect else {
             // Restore standard opaque appearance
             backgroundColor = configuration.style.rowBackgroundColor
-            layer.borderColor = configuration.style.borderColor.cgColor
+            layer.borderColor = configuration.style.borderColor.resolvedColor(with: traitCollection).cgColor
             layer.borderWidth = configuration.style.showBorder
                 ? (configuration.style.borderWidth > 0 ? configuration.style.borderWidth : 1)
                 : 0

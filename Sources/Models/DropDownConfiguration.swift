@@ -28,7 +28,7 @@ public struct DropDownConfiguration {
         public var rowHeight: CGFloat = 44
 
         /// Row background color.
-        public var rowBackgroundColor: UIColor = .systemBackground
+        public var rowBackgroundColor: UIColor = .systemBackground.withAlphaComponent(0.45)
 
         /// System label color.
         public var rowTextColor: UIColor = .label
@@ -40,10 +40,10 @@ public struct DropDownConfiguration {
         public var cellFont: UIFont = .preferredFont(forTextStyle: .body)
 
         /// Whether to show a border around the dropdown list.
-        public var showBorder: Bool = true
+        public var showBorder: Bool = false
 
         /// Subtle system shadow on the floating list.
-        public var showShadow: Bool = true
+        public var showShadow: Bool = false
 
         /// System separator color for borders.
         public var borderColor: UIColor = .separator
@@ -52,16 +52,16 @@ public struct DropDownConfiguration {
         public var borderWidth: CGFloat = 0
 
         /// Corner radius for the dropdown and list.
-        public var cornerRadius: CGFloat = 10
+        public var cornerRadius: CGFloat = 16
 
         /// Whether cell images use rounded corners.
         public var imageCellIsRounded: Bool = false
 
         /// Show separators between rows in the list.
-        public var showSeparators: Bool = true
+        public var showSeparators: Bool = false
 
-        /// When true, applies Liquid Glass material (iOS 26+) or translucent blur (earlier) to the dropdown and list.
-        public var usesGlassEffect: Bool = false
+        /// Applies Liquid Glass material (iOS 26+) or translucent blur (earlier) to the dropdown and list.
+        public var usesGlassEffect: Bool = true
     }
 
     // MARK: - List
@@ -133,18 +133,25 @@ public struct DropDownConfiguration {
 // MARK: - Presets
 
 extension DropDownConfiguration {
-    /// A preset that uses Liquid Glass material (iOS 26+) with a translucent blur fallback on earlier versions.
+    /// The default Liquid Glass style. Equivalent to `DropDownConfiguration()`.
     ///
-    /// This removes borders, shadows, and separators to let the glass material define the visual boundary.
+    /// Uses glass material on iOS 26+ with a translucent blur fallback on earlier versions.
     public static func liquidGlass() -> DropDownConfiguration {
+        DropDownConfiguration()
+    }
+
+    /// Classic Apple style with opaque backgrounds, borders, shadows, and separators.
+    ///
+    /// This matches the traditional `UITableView` / `UITextField` appearance.
+    public static func classic() -> DropDownConfiguration {
         var config = DropDownConfiguration()
-        config.style.usesGlassEffect = true
-        config.style.showBorder = false
-        config.style.showShadow = false
-        config.style.rowBackgroundColor = .clear
-        config.style.selectedRowColor = .white.withAlphaComponent(0.15)
-        config.style.showSeparators = false
-        config.style.cornerRadius = 16
+        config.style.usesGlassEffect = false
+        config.style.showBorder = true
+        config.style.showShadow = true
+        config.style.rowBackgroundColor = .systemBackground
+        config.style.borderColor = .opaqueSeparator
+        config.style.showSeparators = true
+        config.style.cornerRadius = 10
         return config
     }
 }

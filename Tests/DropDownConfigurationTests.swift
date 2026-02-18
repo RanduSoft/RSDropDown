@@ -9,15 +9,38 @@ import Testing
 @Suite("DropDownConfiguration")
 struct DropDownConfigurationTests {
 
-    @Test("Default style values match Apple HIG")
+    @Test("Default style values use Liquid Glass")
     func defaultStyleValues() {
         let config = DropDownConfiguration()
         #expect(config.style.rowHeight == 44)
-        #expect(config.style.cornerRadius == 10)
-        #expect(config.style.showBorder == true)
-        #expect(config.style.showShadow == true)
+        #expect(config.style.cornerRadius == 16)
+        #expect(config.style.showBorder == false)
+        #expect(config.style.showShadow == false)
+        #expect(config.style.showSeparators == false)
+        #expect(config.style.usesGlassEffect == true)
         #expect(config.style.borderWidth == 0)
         #expect(config.style.imageCellIsRounded == false)
+    }
+
+    @Test("Classic preset restores opaque bordered style")
+    func classicPresetValues() {
+        let config = DropDownConfiguration.classic()
+        #expect(config.style.usesGlassEffect == false)
+        #expect(config.style.showBorder == true)
+        #expect(config.style.showShadow == true)
+        #expect(config.style.showSeparators == true)
+        #expect(config.style.cornerRadius == 10)
+        #expect(config.style.rowBackgroundColor == .systemBackground)
+        #expect(config.style.borderColor == .opaqueSeparator)
+    }
+
+    @Test("liquidGlass() is equivalent to default init")
+    func liquidGlassPresetMatchesDefault() {
+        let defaultConfig = DropDownConfiguration()
+        let glassConfig = DropDownConfiguration.liquidGlass()
+        #expect(defaultConfig.style.usesGlassEffect == glassConfig.style.usesGlassEffect)
+        #expect(defaultConfig.style.showBorder == glassConfig.style.showBorder)
+        #expect(defaultConfig.style.cornerRadius == glassConfig.style.cornerRadius)
     }
 
     @Test("Default list values")
