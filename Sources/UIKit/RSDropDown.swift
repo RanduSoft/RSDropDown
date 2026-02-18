@@ -94,6 +94,10 @@ open class RSDropDown: UITextField {
     private var keyboardWillShowToken: Any?
     private var keyboardWillHideToken: Any?
 
+    /// When true, the text field glass is handled externally (e.g., SwiftUI `.glassEffect()`).
+    /// The dropdown list still applies its own UIKit glass treatment independently.
+    public var externalGlassEffect: Bool = false
+
     /// Glass effect background inserted behind the text field content (iOS 26+ or blur fallback).
     private var glassBackgroundView: UIView?
 
@@ -138,8 +142,16 @@ open class RSDropDown: UITextField {
     }
 
     private func refreshBorderColor() {
-        guard !configuration.style.usesGlassEffect, configuration.style.showBorder else { return }
-        layer.borderColor = configuration.style.borderColor.resolvedColor(with: traitCollection).cgColor
+        if externalGlassEffect && configuration.style.usesGlassEffect {
+            // Glass is handled externally (SwiftUI), no border to refresh
+            return
+        }
+        if configuration.style.usesGlassEffect {
+            // UIKit glass mode: subtle separator border for definition
+            layer.borderColor = UIColor.separator.resolvedColor(with: traitCollection).cgColor
+        } else if configuration.style.showBorder {
+            layer.borderColor = configuration.style.borderColor.resolvedColor(with: traitCollection).cgColor
+        }
     }
 
     // MARK: - Public Methods
@@ -509,7 +521,9 @@ open class RSDropDown: UITextField {
 
         if configuration.style.usesGlassEffect {
             tv.backgroundView = makeGlassTableBackground()
-            // Keep table backgroundColor matching cell background so bounce edges look uniform
+            // Subtle border for definition
+            tv.layer.borderColor = UIColor.separator.resolvedColor(with: traitCollection).cgColor
+            tv.layer.borderWidth = 1.0 / UIScreen.main.scale
         } else if configuration.style.showBorder {
             // Resolve with the dropdown's trait collection so dark/light mode is correct
             // (the table view hasn't joined the hierarchy yet and would resolve in light mode)
@@ -522,10 +536,10 @@ open class RSDropDown: UITextField {
         sv.layer.cornerRadius = configuration.style.cornerRadius
         sv.layer.cornerCurve = .continuous
 
-        if configuration.style.showShadow {
+        if configuration.style.showShadow || configuration.style.usesGlassEffect {
             sv.layer.shadowColor = UIColor.black.cgColor
-            sv.layer.shadowOpacity = 0.15
-            sv.layer.shadowRadius = 8
+            sv.layer.shadowOpacity = configuration.style.usesGlassEffect ? 0.12 : 0.15
+            sv.layer.shadowRadius = configuration.style.usesGlassEffect ? 6 : 8
             sv.layer.shadowOffset = CGSize(width: 0, height: 2)
         }
 
@@ -611,6 +625,15 @@ open class RSDropDown: UITextField {
         layer.cornerRadius = configuration.style.cornerRadius
         layer.cornerCurve = .continuous
 
+        // When glass is handled externally (SwiftUI .glassEffect()), just be transparent.
+        // The dropdown list still applies its own UIKit glass treatment independently.
+        if externalGlassEffect && configuration.style.usesGlassEffect {
+            backgroundColor = .clear
+            layer.borderWidth = 0
+            clipsToBounds = true
+            return
+        }
+
         guard configuration.style.usesGlassEffect else {
             // Restore standard opaque appearance
             backgroundColor = configuration.style.rowBackgroundColor
@@ -622,12 +645,12 @@ open class RSDropDown: UITextField {
             return
         }
 
-        // Glass mode: transparent text field with glass material behind it
+        // UIKit-only glass mode (standalone, no SwiftUI wrapper)
         let effectView: UIVisualEffectView
         if #available(iOS 26, *) {
             effectView = UIVisualEffectView(effect: UIGlassEffect())
         } else {
-            effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
+            effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemThinMaterial))
         }
 
         effectView.frame = bounds
@@ -639,7 +662,10 @@ open class RSDropDown: UITextField {
         insertSubview(effectView, at: 0)
 
         backgroundColor = .clear
-        layer.borderWidth = 0
+
+        // Subtle border for definition against the background
+        layer.borderWidth = 1.0 / UIScreen.main.scale
+        layer.borderColor = UIColor.separator.resolvedColor(with: traitCollection).cgColor
         clipsToBounds = true
 
         glassBackgroundView = effectView
@@ -650,7 +676,7 @@ open class RSDropDown: UITextField {
         if #available(iOS 26, *) {
             effectView = UIVisualEffectView(effect: UIGlassEffect())
         } else {
-            effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
+            effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemThinMaterial))
         }
         return effectView
     }

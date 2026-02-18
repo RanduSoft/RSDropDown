@@ -7,17 +7,11 @@ let package = Package(
     platforms: [.iOS(.v17)],
     products: [
         .library(name: "RSDropDown", targets: ["RSDropDown"]),
-        .library(name: "RSDropDownDemo", targets: ["RSDropDownDemo"])
     ],
     targets: [
         .target(
             name: "RSDropDown",
             path: "Sources"
-        ),
-        .target(
-            name: "RSDropDownDemo",
-            dependencies: ["RSDropDown"],
-            path: "Demo"
         ),
         .testTarget(
             name: "RSDropDownTests",
