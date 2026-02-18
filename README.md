@@ -4,10 +4,7 @@ A dropdown component for iOS with two built-in styles: **Liquid Glass** (default
 
 Supports UIKit, SwiftUI, search/autocomplete, custom item types, Dynamic Type, accessibility, and Storyboards.
 
-![UIKit1](https://i.imgur.com/1gl0Nq0.png)
-![UIKit2](https://i.imgur.com/hs0Z9ho.png)
-![SwiftUI1](https://i.imgur.com/eNhUL5H.png)
-![SwiftUI2](https://i.imgur.com/XmPAkpy.png)
+<img src="https://i.imgur.com/1gl0Nq0.png" width="200" /> &nbsp; <img src="https://i.imgur.com/hs0Z9ho.png" width="200" /> &nbsp; <img src="https://i.imgur.com/eNhUL5H.png" width="200" /> &nbsp; <img src="https://i.imgur.com/XmPAkpy.png" width="200" />
 
 ## Requirements
 
@@ -287,7 +284,7 @@ An interactive demo is included in [`Sources/Demo/DemoView.swift`](Sources/Demo/
 
 All v2 properties and methods are preserved with `@available(*, deprecated)` annotations. Existing code compiles with deprecation warnings only — no errors.
 
-| v2 Property / Method | v3 Equivalent |
+| v2 Property / Method | Current Equivalent |
 |---|---|
 | `rowHeight` | `configuration.style.rowHeight` |
 | `rowBackgroundColor` | `configuration.style.rowBackgroundColor` |

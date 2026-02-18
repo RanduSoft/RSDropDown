@@ -58,7 +58,7 @@ open class RSDropDown: UITextField {
         }
     }
 
-    // MARK: - Callbacks (v3 API)
+    // MARK: - Callbacks
 
     /// Called when the user selects an item.
     public var onSelection: ((DropDownSelection) -> Void)?
