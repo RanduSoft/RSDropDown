@@ -4,7 +4,7 @@ A dropdown component for iOS with two built-in styles: **Liquid Glass** (default
 
 Supports UIKit, SwiftUI, search/autocomplete, custom item types, Dynamic Type, accessibility, and Storyboards.
 
-<img src="https://i.imgur.com/1gl0Nq0.png" width="200" /> &nbsp; <img src="https://i.imgur.com/hs0Z9ho.png" width="200" /> &nbsp; <img src="https://i.imgur.com/eNhUL5H.png" width="200" /> &nbsp; <img src="https://i.imgur.com/XmPAkpy.png" width="200" />
+<img src="https://i.imgur.com/1gl0Nq0.png" width="170" /> &nbsp; <img src="https://i.imgur.com/hs0Z9ho.png" width="170" /> &nbsp; <img src="https://i.imgur.com/eNhUL5H.png" width="170" /> &nbsp; <img src="https://i.imgur.com/XmPAkpy.png" width="170" />
 
 ## Requirements
 
