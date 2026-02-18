@@ -43,15 +43,22 @@ public struct RSDropDownPicker<Item: DropDownItem & Equatable>: UIViewRepresenta
         dropdown.placeholder = placeholder
         dropdown.configuration = configuration
         dropdown.setItems(items)
-        dropdown.onSelection = { [self] dropDownSelection in
-            if let selected = dropDownSelection.item as? Item {
-                self.selection = selected
+        dropdown.onSelection = { dropDownSelection in
+            DispatchQueue.main.async {
+                if let selected = dropDownSelection.item as? Item {
+                    self.selection = selected
+                }
             }
         }
         return dropdown
     }
 
     public func updateUIView(_ uiView: RSDropDown, context: Context) {
+        // Don't interfere while the dropdown is open or animating closed —
+        // setItems/configuration changes trigger resizeTable and reloadData
+        // which fight the ongoing hide animation and cause flicker.
+        guard !uiView.isDropDownOpen else { return }
+
         uiView.setItems(items)
         uiView.configuration = configuration
         if let selected = selection,

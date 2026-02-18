@@ -88,7 +88,7 @@ open class RSDropDown: UITextField {
     private var tableViewHeightY: CGFloat = 100
     private var pointToParent = CGPoint.zero
     private var keyboardHeight: CGFloat = 0
-    private var isDropDownOpen: Bool = false
+    public private(set) var isDropDownOpen: Bool = false
     private var willShowTableViewUp: Bool = false
 
     private var keyboardWillShowToken: Any?
