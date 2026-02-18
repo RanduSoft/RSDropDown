@@ -1,1 +1,3 @@
 RSDropDown.xcscheme
+.build/
+.swiftpm/
