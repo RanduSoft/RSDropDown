@@ -175,6 +175,40 @@ final class RSDropDownDemoViewController: UIViewController {
             dd.tintColor = .systemRed // checkmark color
         }
 
+        // MARK: - Liquid Glass Section
+
+        addGlassSectionHeader()
+
+        addSection("Liquid Glass")
+        addDropDown { dd in
+            dd.placeholder = "Glass dropdown"
+            dd.optionArray = self.shortItems
+            dd.configuration = .liquidGlass()
+        }
+
+        addSection("Liquid Glass (Pre-selected)")
+        addDropDown { dd in
+            dd.optionArray = self.shortItems
+            dd.configuration = .liquidGlass()
+            dd.selectedIndex = 1
+        }
+
+        addSection("Liquid Glass + Search")
+        addDropDown { dd in
+            dd.placeholder = "Type to search..."
+            dd.optionArray = self.countryItems
+            var config = DropDownConfiguration.liquidGlass()
+            config.search.isEnabled = true
+            dd.configuration = config
+        }
+
+        addSection("Liquid Glass (Long List)")
+        addDropDown { dd in
+            dd.placeholder = "Scroll through items"
+            dd.optionArray = self.items
+            dd.configuration = .liquidGlass()
+        }
+
         // Bottom spacing
         let spacer = UIView()
         spacer.translatesAutoresizingMaskIntoConstraints = false
@@ -227,6 +261,49 @@ final class RSDropDownDemoViewController: UIViewController {
         stackView.addArrangedSubview(wrapper)
     }
 
+    private func addGlassSectionHeader() {
+        let container = UIView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+
+        let separator = UIView()
+        separator.backgroundColor = .separator
+        separator.translatesAutoresizingMaskIntoConstraints = false
+
+        let label = UILabel()
+        label.text = "LIQUID GLASS STYLE"
+        label.font = .preferredFont(forTextStyle: .headline)
+        label.textColor = .label
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        let subtitle = UILabel()
+        subtitle.text = "iOS 26+ glass material, translucent blur fallback"
+        subtitle.font = .preferredFont(forTextStyle: .caption2)
+        subtitle.textColor = .secondaryLabel
+        subtitle.translatesAutoresizingMaskIntoConstraints = false
+
+        container.addSubview(separator)
+        container.addSubview(label)
+        container.addSubview(subtitle)
+
+        NSLayoutConstraint.activate([
+            separator.topAnchor.constraint(equalTo: container.topAnchor, constant: 28),
+            separator.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            separator.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            separator.heightAnchor.constraint(equalToConstant: 0.5),
+
+            label.topAnchor.constraint(equalTo: separator.bottomAnchor, constant: 16),
+            label.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            label.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+
+            subtitle.topAnchor.constraint(equalTo: label.bottomAnchor, constant: 2),
+            subtitle.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            subtitle.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            subtitle.bottomAnchor.constraint(equalTo: container.bottomAnchor)
+        ])
+
+        stackView.addArrangedSubview(container)
+    }
+
     private func addDropDown(height: CGFloat = 44, configure: @escaping (RSDropDown) -> Void) {
         let dropdown = RSDropDown(frame: .zero)
         dropdown.translatesAutoresizingMaskIntoConstraints = false
@@ -261,6 +338,8 @@ struct RSDropDownSwiftUIDemo: View {
     @State private var selection2: String?
     @State private var selection3: String?
     @State private var selection4: String?
+    @State private var glassSelection1: String?
+    @State private var glassSelection2: String?
 
     private let cities = ["London", "Paris", "Tokyo", "New York", "Sydney"]
 
@@ -320,6 +399,44 @@ struct RSDropDownSwiftUIDemo: View {
                             var config = DropDownConfiguration()
                             config.style.showBorder = false
                             config.style.showShadow = false
+                            return config
+                        }()
+                    )
+                    .frame(height: 44)
+                }
+
+                // MARK: - Liquid Glass
+
+                Divider()
+                    .padding(.top, 16)
+
+                Text("Liquid Glass Style")
+                    .font(.headline)
+
+                Text("iOS 26+ glass material, translucent blur fallback")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                Group {
+                    sectionLabel("Glass Default")
+                    RSDropDownPicker(
+                        items: cities,
+                        selection: $glassSelection1,
+                        placeholder: "Glass picker"
+                    )
+                    .glassStyle()
+                    .frame(height: 44)
+                }
+
+                Group {
+                    sectionLabel("Glass + Search")
+                    RSDropDownPicker(
+                        items: cities,
+                        selection: $glassSelection2,
+                        placeholder: "Type to search...",
+                        configuration: {
+                            var config = DropDownConfiguration.liquidGlass()
+                            config.search.isEnabled = true
                             return config
                         }()
                     )

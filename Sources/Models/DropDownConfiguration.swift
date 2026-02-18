@@ -59,6 +59,9 @@ public struct DropDownConfiguration {
 
         /// Show separators between rows in the list.
         public var showSeparators: Bool = true
+
+        /// When true, applies Liquid Glass material (iOS 26+) or translucent blur (earlier) to the dropdown and list.
+        public var usesGlassEffect: Bool = false
     }
 
     // MARK: - List
@@ -124,5 +127,24 @@ public struct DropDownConfiguration {
     public struct Animation {
         /// Apple standard animation duration (0.25s).
         public var duration: TimeInterval = 0.25
+    }
+}
+
+// MARK: - Presets
+
+extension DropDownConfiguration {
+    /// A preset that uses Liquid Glass material (iOS 26+) with a translucent blur fallback on earlier versions.
+    ///
+    /// This removes borders, shadows, and separators to let the glass material define the visual boundary.
+    public static func liquidGlass() -> DropDownConfiguration {
+        var config = DropDownConfiguration()
+        config.style.usesGlassEffect = true
+        config.style.showBorder = false
+        config.style.showShadow = false
+        config.style.rowBackgroundColor = .clear
+        config.style.selectedRowColor = .white.withAlphaComponent(0.15)
+        config.style.showSeparators = false
+        config.style.cornerRadius = 16
+        return config
     }
 }

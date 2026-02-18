@@ -84,4 +84,11 @@ public struct RSDropDownPicker<Item: DropDownItem & Equatable>: UIViewRepresenta
         copy.configuration.search.isEnabled = enabled
         return copy
     }
+
+    /// Applies the Liquid Glass style (iOS 26+ glass material, translucent blur fallback on earlier).
+    public func glassStyle() -> RSDropDownPicker {
+        var copy = self
+        copy.configuration = .liquidGlass()
+        return copy
+    }
 }

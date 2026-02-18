@@ -94,6 +94,9 @@ open class RSDropDown: UITextField {
     private var keyboardWillShowToken: Any?
     private var keyboardWillHideToken: Any?
 
+    /// Glass effect background inserted behind the text field content (iOS 26+ or blur fallback).
+    private var glassBackgroundView: UIView?
+
     // Legacy callback storage (used by deprecated API shims)
     var legacyDidSelectCompletion: ((String, Int, Int) -> Void)?
     var legacyTableViewWillAppearHandler: (() -> Void)?
@@ -143,11 +146,16 @@ open class RSDropDown: UITextField {
         }
 
         backgroundView.frame = parentController.view.frame
+        backgroundView.backgroundColor = configuration.style.usesGlassEffect
+            ? .clear
+            : .black.withAlphaComponent(0.1)
         pointToParent = getConvertedPoint(for: self, relativeTo: parentController.view)
         parentController.view.insertSubview(backgroundView, aboveSubview: self)
 
         // Cut a hole in the scrim where the dropdown is so it stays fully visible
-        applyScrimMask()
+        if !configuration.style.usesGlassEffect {
+            applyScrimMask()
+        }
 
         onDropDownWillAppear?()
         legacyTableViewWillAppearHandler?()
@@ -324,6 +332,9 @@ open class RSDropDown: UITextField {
     }
 
     private func applyConfiguration() {
+        // Glass / standard appearance
+        applyGlassEffectIfNeeded()
+
         animator.duration = configuration.animation.duration
         tableManager.style = configuration.style
         tableManager.showCheckmark = configuration.behavior.showCheckmark
@@ -477,7 +488,10 @@ open class RSDropDown: UITextField {
         tv.showsVerticalScrollIndicator = true
         tv.verticalScrollIndicatorInsets = UIEdgeInsets(top: 4, left: 0, bottom: 4, right: 0)
 
-        if configuration.style.showBorder {
+        if configuration.style.usesGlassEffect {
+            tv.backgroundView = makeGlassTableBackground()
+            tv.backgroundColor = .clear
+        } else if configuration.style.showBorder {
             tv.layer.borderColor = configuration.style.borderColor.cgColor
             tv.layer.borderWidth = configuration.style.borderWidth > 0 ? configuration.style.borderWidth : 1
         }
@@ -563,6 +577,61 @@ open class RSDropDown: UITextField {
         mask.path = fullPath.cgPath
         mask.fillRule = .evenOdd
         backgroundView.layer.mask = mask
+    }
+
+    // MARK: - Liquid Glass
+
+    private func applyGlassEffectIfNeeded() {
+        // Remove any existing glass background
+        glassBackgroundView?.removeFromSuperview()
+        glassBackgroundView = nil
+
+        // Always keep corner radius in sync
+        layer.cornerRadius = configuration.style.cornerRadius
+        layer.cornerCurve = .continuous
+
+        guard configuration.style.usesGlassEffect else {
+            // Restore standard opaque appearance
+            backgroundColor = configuration.style.rowBackgroundColor
+            layer.borderColor = configuration.style.borderColor.cgColor
+            layer.borderWidth = configuration.style.showBorder
+                ? (configuration.style.borderWidth > 0 ? configuration.style.borderWidth : 1)
+                : 0
+            clipsToBounds = true
+            return
+        }
+
+        // Glass mode: transparent text field with glass material behind it
+        let effectView: UIVisualEffectView
+        if #available(iOS 26, *) {
+            effectView = UIVisualEffectView(effect: UIGlassEffect())
+        } else {
+            effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
+        }
+
+        effectView.frame = bounds
+        effectView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        effectView.layer.cornerRadius = configuration.style.cornerRadius
+        effectView.layer.cornerCurve = .continuous
+        effectView.clipsToBounds = true
+        effectView.isUserInteractionEnabled = false
+        insertSubview(effectView, at: 0)
+
+        backgroundColor = .clear
+        layer.borderWidth = 0
+        clipsToBounds = true
+
+        glassBackgroundView = effectView
+    }
+
+    private func makeGlassTableBackground() -> UIVisualEffectView {
+        let effectView: UIVisualEffectView
+        if #available(iOS 26, *) {
+            effectView = UIVisualEffectView(effect: UIGlassEffect())
+        } else {
+            effectView = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
+        }
+        return effectView
     }
 
     // MARK: - Helpers
